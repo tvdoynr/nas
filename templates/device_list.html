@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Device Management</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css" rel="stylesheet" type="text/css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+
+    <style>
+        body {
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .navbar {
+            margin-bottom: 0;
+            z-index: 1000;
+            position: fixed;
+            width: 100%;
+            background-color: #2193b0;
+            color: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar-brand, .nav-link {
+            color: white !important;
+        }
+
+        .sidebar {
+            height: 100vh;
+            width: 150px;
+            position: fixed;
+            top: 56px; /* Height of the navbar */
+            left: 0;
+            background: linear-gradient(360deg, rgba(33, 146, 175, 0.43), #2192af);
+            padding-top: 20px;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar a {
+            padding: 15px;
+            text-align: center;
+            display: block;
+            color: white;
+            text-decoration: none;
+        }
+
+        .sidebar a:hover {
+            background-color: #1e90ff;
+        }
+
+        .content {
+            margin-left: 150px;
+            padding: 20px;
+            padding-top: 76px;
+            background-color: #f4f7f6;
+
+
+        }
+
+        .table thead {
+            background-color: #2193b0;
+            color: white;
+        }
+
+        .btn {
+            margin-bottom: 10px; /* Butonları alt alta sıralamak için margin-bottom ekliyoruz */
+        }
+
+        .btn-sm {
+            padding: .25rem .5rem;
+            font-size: .875rem;
+            line-height: 1.5;
+            border-radius: .2rem;
+        }
+
+        #network {
+            width: 70%;
+            height: 800px;
+            border: 1px solid lightgray;
+            background-color: white;
+            z-index: -2;
+            pointer-events: auto;
+            float: left;
+        }
+
+
+        .device-image {
+            width: 100px; /* Örnek olarak 100px */
+            height: 100px; /* Örnek olarak 100px */
+            object-fit: contain; /* Resimlerin orantılı şekilde büyümesini sağlar */
+        }
+
+        #device-list-container {
+            display: none;
+        }
+
+        #tooltipDeviceInfo {
+            display: none;
+
+        }
+
+        #tooltip-container {
+
+            background-color: white;
+            flex-direction: column;
+            color: #333;
+
+            margin-left: 50px;
+            float: left;
+
+            z-index: 100;
+
+
+            border: 5px solid #2193b0;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            width: 20%;
+
+        }
+
+        .btn:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        #backButton {
+
+        }
+
+        #tooltip-details {
+            padding: 10px;
+            background-color: #eef;
+            border: 1px solid #dde;
+            display: none;
+        / / İlk başta gizli olacak
+        }
+
+
+    </style>
+</head>
+<body>
+{% load static %}
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="#">Network Management</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item active">
+                <a class="nav-link" href="#">Home <span class="sr-only">(current)</span></a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">Features</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">Pricing</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">Logout</a>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<!-- Sidebar -->
+<div class="sidebar">
+    <a href="#" id="dashboard-link">Dashboard</a>
+    <a href="#" id="devices-link">Devices</a>
+    <a href="#">Settings</a>
+</div>
+
+<!-- Page Content -->
+<div class="content">
+
+
+    <div id="network"></div>
+    <div id="tooltip-container" style="  display: none;">
+        <div id="backDiv" style="display: none">
+            <button id="backButton" onclick="showDetails()">
+                <i class="fas fa-arrow-left"></i></button>
+        </div>
+
+        <strong>Device Name:</strong> <span id="tooltip-name"></span>
+
+        <strong id="details" style="display: none">Details:</strong> <span style="display: none"
+                                                                           id="tooltip-details"></span><br>
+        <button onclick="showDetails()" class="btn btn-info" style="margin-top: 20px">General Information</button>
+
+        <button onclick="handleSetIPClick()" class="btn btn-success">Set IP</button>
+        <div id="ip-form" style="display: none;">
+            <div class="form-group">
+                <label for="ip-address">IP Address:</label>
+                <input type="text" id="ip-address" class="form-control" placeholder="Enter IP address">
+            </div>
+            <div class="form-group">
+                <label for="gateway">Gateway:</label>
+                <input type="text" id="gateway" class="form-control" placeholder="Enter Gateway">
+            </div>
+            <button id="SaveButton" class="btn btn-primary" onclick="saveIP()">Save</button>
+            <button class="btn btn-secondary">Cancel</button>
+        </div>
+
+
+        <button class="btn btn-warning" onclick="updateFirmware()">Firmware Update</button>
+        <div id="update-status" style="display:none;">
+            <img src="{% static 'images/loading.gif' %}" alt="Updating"/> <!-- Yükleme ikonu -->
+        </div>
+        <button class="btn btn-danger">Backup</button>
+    </div>
+    <div id="device-list-container">
+        <h1>Device List</h1>
+        <table class="table table-striped table-bordered">
+            <thead class="thead-dark">
+            <tr>
+                <th>Device Image</th>
+                <th>Device Name</th>
+                <th>IP Address</th>
+                <th>SSH Username</th>
+            </tr>
+            </thead>
+            <tbody>
+
+            <tr>
+                <td><img src="{% static 'images/switch1.png' %}" alt="Switch 1" class="device-image"></td>
+                <td>Switch 1</td>
+                <td>192.168.1.2</td>
+                <td>admin</td>
+            </tr>
+            <!-- Diğer cihazlar burada listelenir -->
+            </tbody>
+        </table>
+    </div>
+
+
+</div>
+
+<!-- Device Info Tooltip -->
+
+
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        $('#devices-link').click(function () {
+            $('#network').hide();
+            $('#tooltip-container').hide();
+            $('#page-title').text('Device List');
+
+            $('#device-list-container').show();
+        });
+
+        $('#dashboard-link').click(function () {
+            $('#device-list-container').hide();
+            $('#page-title').text('Network Topology');
+            $('#network').show();
+        });
+
+
+    });
+
+
+    function updateFirmware() {
+        var updateStatus = document.getElementById('update-status');
+
+        var backDiv = document.getElementById('backDiv');
+
+        var SaveButton = document.getElementById('SaveButton');
+
+        backDiv.style.display = "block";
+
+        updateStatus.style.display = "block";
+
+        var buttons = document.querySelectorAll('#tooltip-container button');
+        buttons.forEach(button => {
+
+            if (button.id !== "backButton") {
+                button.style.display = 'none';
+            }
+
+        });
+
+
+        // AJAX isteği ile firmware güncellemesi yap
+        /*$.ajax({
+        url: '/path/to/device-firmware-update/', // Gerçek URL ile değiştirin
+        method: 'POST',
+        data: {
+        // Gerekli verileri gönder
+        'device_id': selectedDeviceId, // Seçili cihazın ID'si, bu değeri nasıl aldığınıza bağlı olarak değişir
+        'csrfmiddlewaretoken': '
+        {{ csrf_token }}'
+            },
+            success: function(response) {
+            // İşlem başarılı ise
+            document.getElementById('update-status').innerHTML = 'Done!';
+            },
+            error: function() {
+            // Hata durumunda
+            document.getElementById('update-status').innerHTML = 'Error updating firmware!';
+            },
+            complete: function() {
+            // Her durumda yükleme ikonunu bir süre sonra gizle
+            setTimeout(function() {
+                document.getElementById('update-status').style.display = 'none';
+            }, 2000);
+            }
+            });*/
+    }
+
+
+    function saveIP() {
+        var ipAddress = document.getElementById('ip-address').value;
+        var gateway = document.getElementById('gateway').value;
+
+        $.ajax({
+            url: '/save-ip/',  // Django URL'ye gönderme
+            type: 'POST',
+            data: {
+                'ip_address': ipAddress,
+                'gateway': gateway,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'  // CSRF token ekleme
+            },
+            success: function (response) {
+                alert('IP Configuration Saved Successfully!');
+
+            },
+            error: function () {
+                alert('Error saving IP configuration.');
+            }
+        });
+    }
+
+    function handleSetIPClick() {
+        var IpForm = document.getElementById('ip-form');
+
+        var backDiv = document.getElementById('backDiv');
+
+        var SaveButton = document.getElementById('SaveButton');
+
+        backDiv.style.display = "block";
+
+        IpForm.style.display = "block";
+
+
+        // Diğer butonları gizle
+        var buttons = document.querySelectorAll('#tooltip-container button');
+        buttons.forEach(button => {
+
+            if (button.id !== "backButton") {
+                button.style.display = 'none';
+            }
+
+        });
+
+        SaveButton.style.display = "block";
+    }
+
+
+    var backButton = document.getElementById('backButton');
+    backButton.onclick = backFunction;
+
+    function showDetails() {
+        // Details başlığını ve içeriğini göster
+        var detail = document.getElementById('details');
+
+
+        var details = document.getElementById('tooltip-details');
+
+        var backDiv = document.getElementById('backDiv');
+
+        backDiv.style.display = "block";
+        if (details.style.display === 'none' || details.style.display === '') {
+            detail.style.display = "block";
+            details.style.display = 'block';
+            // Details başlığını göster
+
+            // Diğer butonları gizle
+            var buttons = document.querySelectorAll('#tooltip-container button');
+            buttons.forEach(button => {
+                if (button.id !== "backButton") {
+                    button.style.display = 'none';
+                }
+
+
+            });
+        }
+    }
+
+
+    function backFunction() {
+        // Tooltip detaylarını gizle
+        var details = document.getElementById('tooltip-details');
+        details.style.display = 'none';
+
+        var detail = document.getElementById('details');
+        detail.style.display = "none";
+        // Details başlığını gizle
+        var IpForm = document.getElementById('ip-form');
+        IpForm.style.display = "none";
+
+        var updateStatus = document.getElementById('update-status');
+        updateStatus.style.display = "none";
+        // Diğer butonları görünür yap
+        var otherButtons = document.querySelectorAll('#tooltip-container button:not(:first-child)');
+        otherButtons.forEach(button => {
+            button.style.display = 'block';
+        });
+
+        var backDiv = document.getElementById('backDiv');
+
+        backDiv.style.display = "none";
+
+    }
+
+
+    var nodes = new vis.DataSet({{ nodes|safe }});
+    var edges = new vis.DataSet({{ edges|safe }});
+
+    {#var nodes = new vis.DataSet([#}
+    {#    {id: 1, label: 'Backbone Switch', title: 'Backbone Switch\nIP: 10.0.0.1\nSSH: admin', image: '{% static "images/backbone.jpg" %}', shape: 'image', size: 30},#}
+    {#    {id: 2, label: 'Switch 1', title: 'Switch 1\nIP: 10.0.1.1\nSSH: admin', image: '{% static "images/Switch.png" %}', shape: 'image', size: 50},#}
+    {#    {id: 3, label: 'Switch 2', title: 'Switch 2\nIP: 10.0.2.1\nSSH: admin', image: '{% static "images/Switch.png" %}', shape: 'image', size: 50},#}
+    {#    {id: 4, label: 'Switch 3', title: 'Switch 3\nIP: 10.0.3.1\nSSH: admin', image: '{% static "images/Switch.png" %}', shape: 'image', size: 50},#}
+    {#    {id: 5, label: 'PC 1-1', title: 'PC 1-1\nIP: 10.0.1.2\nSSH: user', image: '{% static "images/pc.jpg" %}', shape: 'image', size: 30},#}
+    {#    {id: 6, label: 'PC 1-2', title: 'PC 1-2\nIP: 10.0.1.3\nSSH: user', image: '{% static "images/pc.jpg" %}', shape: 'image', size: 30},#}
+    {#    {id: 7, label: 'PC 1-3', title: 'PC 1-3\nIP: 10.0.1.4\nSSH: user', image: '{% static "images/pc.jpg" %}', shape: 'image', size: 30},#}
+    {#    {id: 8, label: 'PC 2-1', title: 'PC 2-1\nIP: 10.0.2.2\nSSH: user', image: '{% static "images/pc.jpg" %}', shape: 'image', size: 30},#}
+    {#    {id: 9, label: 'PC 2-2', title: 'PC 2-2\nIP: 10.0.2.3\nSSH: user', image: '{% static "images/pc.jpg" %}', shape: 'image', size: 30},#}
+    {#    {id: 10, label: 'PC 2-3', title: 'PC 2-3\nIP: 10.0.2.4\nSSH: user', image: '{% static "images/pc.jpg" %}', shape: 'image', size: 30},#}
+    {#    {id: 11, label: 'PC 3-1', title: 'PC 3-1\nIP: 10.0.3.2\nSSH: user', image: '{% static "images/pc.jpg" %}', shape: 'image', size: 30},#}
+    {#    {id: 12, label: 'PC 3-2', title: 'PC 3-2\nIP: 10.0.3.3\nSSH: user', image: '{% static "images/pc.jpg" %}', shape: 'image', size: 30},#}
+    {#    {id: 13, label: 'PC 3-3', title: 'PC 3-3\nIP: 10.0.3.4\nSSH: user', image: '{% static "images/pc.jpg" %}', shape: 'image', size: 30}#}
+    {#]);#}
+    {##}
+    {#var edges = new vis.DataSet([#}
+    {#    {from: 1, to: 2},#}
+    {#    {from: 1, to: 3},#}
+    {#    {from: 1, to: 4},#}
+    {#    {from: 2, to: 5},#}
+    {#    {from: 2, to: 6},#}
+    {#    {from: 2, to: 7},#}
+    {#    {from: 3, to: 8},#}
+    {#    {from: 3, to: 9},#}
+    {#    {from: 3, to: 10},#}
+    {#    {from: 4, to: 11},#}
+    {#    {from: 4, to: 12},#}
+    {#    {from: 4, to: 13}#}
+    {#]);#}
+
+    var container = document.getElementById('network');
+    var data = {
+        nodes: nodes,
+        edges: edges
+    };
+    var options = {
+        nodes: {
+            shape: 'image',
+            size: 50,
+            font: {
+                size: 18
+            }
+        },
+        edges: {
+            width: 3
+        },
+        physics: {
+            enabled: true
+        },
+        interaction: {
+            dragNodes: true,
+            dragView: true,
+            zoomView: true
+        }
+
+
+    };
+    var network = new vis.Network(container, data, options);
+
+    function convertNewlinesToBreaks(text) {
+        return text.replace(/\n/g, '<br>');
+    }
+
+
+    var isDragging = false;
+
+
+    network.on('startStabilizing', function (params) {
+        document.getElementById('tooltip-container').style.display = 'none';
+    });
+
+    network.on('stabilized', function (params) {
+        document.getElementById('tooltip-container').style.display = 'none';
+    });
+
+    network.on('zoom', function (params) {
+        document.getElementById('tooltip-container').style.display = 'none';
+    });
+
+    network.on('dragStart', function (params) {
+        document.getElementById('tooltip-container').style.display = 'none';
+        isDragging = true;
+    });
+
+    network.on('dragEnd', function (params) {
+        isDragging = false;
+    });
+
+    network.on('dragging', function (params) {
+        document.getElementById('tooltip-container').style.display = 'none';
+    });
+
+    network.on("click", function (params) {
+        if (params.nodes.length > 0) {
+            var nodeDetails = nodes.get(params.nodes[0]);
+            document.getElementById('tooltip-name').textContent = nodeDetails.label;
+            var detailsContent = convertNewlinesToBreaks(nodeDetails.title)
+            document.getElementById('tooltip-details').innerHTML = detailsContent;
+            document.getElementById('tooltip-container').style.display = 'flex';
+
+            backFunction();
+
+        }
+
+    });
+
+
+</script>
+</body>
+</html>
