@@ -2,90 +2,61 @@ from django.shortcuts import render, redirect
 from django.views import View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from napalm import get_network_driver
-from .models import NetworkDevice
+from .napalm_utilities import switch_get_info, switch_get_backup, pc_telnet
+from .models import NetworkDevice, Switch, PC
+
 
 class DeviceListView(LoginRequiredMixin, View):
     def get(self, request):
-        devices = NetworkDevice.objects.filter(user=request.user)
+        switches = Switch.objects.all()
+        pcs = PC.objects.all()
+        devices = list(switches) + list(pcs)
+
         nodes = []
         edges = []
 
+        for switch in switches:
+            node = {
+                'id': switch.id,
+                'label': switch.name,
+                'title': f"{switch.name}\nIP: {switch.ip_address}\nSSH: {switch.ssh_username}",
+                'shape': 'image',
+                'size': 50,
+                'image': switch.image,
+            }
+            nodes.append(node)
 
-        # BUNU SILMEYIN LUTFEN OLMASI GEREKN BU
+            if switch.backbone_switch:
+                edge = {
+                    'from': switch.backbone_switch.id,
+                    'to': switch.id,
+                }
+                edges.append(edge)
 
-        # for device in devices:
-        #     node = {
-        #         'id': device.id,
-        #         'label': device.name,
-        #         'title': f"{device.name}\nIP: {device.ip_address}\nSSH: {device.ssh_username}",
-        #         'image': device.image.url if device.image else '',
-        #         'shape': 'image',
-        #         'size': 50,
-        #     }
-        #     nodes.append(node)
-        #
-        #     for connected_device in device.connected_devices.all():
-        #         edge = {
-        #             'from': device.id,
-        #             'to': connected_device.id,
-        #         }
-        #         edges.append(edge)
+        for pc in pcs:
+            node = {
+                'id': pc.id,
+                'label': pc.name,
+                'title': f"{pc.name}\nIP: {pc.ip_address}\nSSH: user",
+                'shape': 'image',
+                'size': 30,
+                'image': pc.image,
+            }
+            nodes.append(node)
 
-
-
-        nodes = [
-            {'id': 1, 'label': 'Backbone Switch', 'title': 'Backbone Switch\nIP: 10.0.0.1\nSSH: admin',
-             'image': '/static/images/backbone.jpg', 'shape': 'image', 'size': 30},
-            {'id': 2, 'label': 'Switch 1', 'title': 'Switch 1\nIP: 10.0.1.1\nSSH: admin',
-             'image': '/static/images/Switch.png', 'shape': 'image', 'size': 50},
-            {'id': 3, 'label': 'Switch 2', 'title': 'Switch 2\nIP: 10.0.2.1\nSSH: admin',
-             'image': '/static/images/Switch.png', 'shape': 'image', 'size': 50},
-            {'id': 4, 'label': 'Switch 3', 'title': 'Switch 3\nIP: 10.0.3.1\nSSH: admin',
-             'image': '/static/images/Switch.png', 'shape': 'image', 'size': 50},
-            {'id': 5, 'label': 'PC 1-1', 'title': 'PC 1-1\nIP: 10.0.1.2\nSSH: user', 'image': '/static/images/pc.jpg',
-             'shape': 'image', 'size': 30},
-            {'id': 6, 'label': 'PC 1-2', 'title': 'PC 1-2\nIP: 10.0.1.3\nSSH: user', 'image': '/static/images/pc.jpg',
-             'shape': 'image', 'size': 30},
-            {'id': 7, 'label': 'PC 1-3', 'title': 'PC 1-3\nIP: 10.0.1.4\nSSH: user', 'image': '/static/images/pc.jpg',
-             'shape': 'image', 'size': 30},
-            {'id': 8, 'label': 'PC 2-1', 'title': 'PC 2-1\nIP: 10.0.2.2\nSSH: user', 'image': '/static/images/pc.jpg',
-             'shape': 'image', 'size': 30},
-            {'id': 9, 'label': 'PC 2-2', 'title': 'PC 2-2\nIP: 10.0.2.3\nSSH: user', 'image': '/static/images/pc.jpg',
-             'shape': 'image', 'size': 30},
-            {'id': 10, 'label': 'PC 2-3', 'title': 'PC 2-3\nIP: 10.0.2.4\nSSH: user', 'image': '/static/images/pc.jpg',
-             'shape': 'image', 'size': 30},
-            {'id': 11, 'label': 'PC 3-1', 'title': 'PC 3-1\nIP: 10.0.3.2\nSSH: user', 'image': '/static/images/pc.jpg',
-             'shape': 'image', 'size': 30},
-            {'id': 12, 'label': 'PC 3-2', 'title': 'PC 3-2\nIP: 10.0.3.3\nSSH: user', 'image': '/static/images/pc.jpg',
-             'shape': 'image', 'size': 30},
-            {'id': 13, 'label': 'PC 3-3', 'title': 'PC 3-3\nIP: 10.0.3.4\nSSH: user', 'image': '/static/images/pc.jpg',
-             'shape': 'image', 'size': 30}
-        ]
-
-        edges = [
-            {'from': 1, 'to': 2},
-            {'from': 1, 'to': 3},
-            {'from': 1, 'to': 4},
-            {'from': 2, 'to': 5},
-            {'from': 2, 'to': 6},
-            {'from': 2, 'to': 7},
-            {'from': 3, 'to': 8},
-            {'from': 3, 'to': 9},
-            {'from': 3, 'to': 10},
-            {'from': 4, 'to': 11},
-            {'from': 4, 'to': 12},
-            {'from': 4, 'to': 13}
-        ]
+            if pc.switch:
+                edge = {
+                    'from': pc.switch.id,
+                    'to': pc.id,
+                }
+                edges.append(edge)
 
         context = {
             'nodes': nodes,
             'edges': edges,
+            'devices': devices,
         }
 
-        context = {
-            'nodes': nodes,
-            'edges': edges,
-        }
         return render(request, 'device_list.html', context)
 
 

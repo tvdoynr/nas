@@ -226,13 +226,18 @@
             </thead>
             <tbody>
 
-            <tr>
-                <td><img src="{% static 'images/switch1.png' %}" alt="Switch 1" class="device-image"></td>
-                <td>Switch 1</td>
-                <td>192.168.1.2</td>
-                <td>admin</td>
-            </tr>
-            <!-- Diğer cihazlar burada listelenir -->
+            {% for device in devices %}
+                <tr>
+                    <td><img src="{{ device.image }}" alt="{{ device.name }}" class="device-image"></td>
+                    <td>{{ device.name }}</td>
+                    <td>{{ device.ip_address }}</td>
+                    <td>{{ device.ssh_username }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="4">No devices found.</td>
+                </tr>
+            {% endfor %}
             </tbody>
         </table>
     </div>
@@ -297,6 +302,8 @@
         // Gerekli verileri gönder
         'device_id': selectedDeviceId, // Seçili cihazın ID'si, bu değeri nasıl aldığınıza bağlı olarak değişir
         'csrfmiddlewaretoken': '
+
+
         {{ csrf_token }}'
             },
             success: function(response) {
