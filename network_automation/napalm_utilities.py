@@ -206,6 +206,38 @@ def create_vlan(ip, username, password, enable_password, vlan_id, vlan_name):
     finally:
         device.close()
 
+def create_route(ip, username, password, destination_network, subnet_mask, next_hop):
+    driver = get_network_driver('ios')
+    device = driver(ip, username, password)
+    device.open()
+
+    try:
+        # Enter enable mode
+        device.device.send_command_timing("enable")
+
+        # Enter configuration mode
+        device.device.send_command_timing("configure terminal")
+
+        # Construct the configuration command to create a static route
+        config_command = f"ip route {destination_network} {subnet_mask} {next_hop}"
+
+        # Execute the command using device.cli()
+        device.device.send_command_timing(config_command)
+
+        # Exit configuration mode
+        device.device.send_command_timing("end")
+
+        # Save the configuration
+        save_configuration(device)
+
+        print(f"Static route to {destination_network} via {next_hop} created successfully")
+
+    except Exception as e:
+        print(f"An error occurred while creating the route: {e}")
+
+    finally:
+        device.close()
+
 def save_configuration(device):
     try:
         # Save the configuration
