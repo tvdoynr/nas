@@ -168,3 +168,44 @@ def switch_restore_backup(ip, username, password, backup_file):
 
     finally:
         device.close()
+
+
+def create_vlan(ip, username, password, enable_password, vlan_id, vlan_name):
+    driver = get_network_driver('ios')
+    device = driver(ip, username, password)
+    device.open()
+
+    try:
+        # Enter enable mode
+        device.device.send_command_timing("enable")
+        device.device.send_command_timing(enable_password)
+
+        # Enter configuration mode
+        device.device.send_command_timing("configure terminal")
+
+        # Construct the configuration commands to create a VLAN
+        config_commands = [
+            f"vlan {vlan_id}",
+            f"name {vlan_name}"
+        ]
+
+        # Execute each command using device.cli()
+        for command in config_commands:
+            device.device.send_command_timing(command)
+
+        # Exit configuration mode
+        device.device.send_command_timing("end")
+
+        # Save the configuration
+        device.device.send_command_timing("write memory")
+
+        # Wait for the command to complete
+        time.sleep(10)
+
+        print(f"VLAN {vlan_id} ({vlan_name}) created successfully")
+
+    except Exception as e:
+        print(f"An error occurred while creating VLAN: {e}")
+
+    finally:
+        device.close()
