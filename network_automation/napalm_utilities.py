@@ -196,11 +196,7 @@ def create_vlan(ip, username, password, enable_password, vlan_id, vlan_name):
         # Exit configuration mode
         device.device.send_command_timing("end")
 
-        # Save the configuration
-        device.device.send_command_timing("write memory")
-
-        # Wait for the command to complete
-        time.sleep(10)
+        save_configuration(device)
 
         print(f"VLAN {vlan_id} ({vlan_name}) created successfully")
 
@@ -209,3 +205,15 @@ def create_vlan(ip, username, password, enable_password, vlan_id, vlan_name):
 
     finally:
         device.close()
+
+def save_configuration(device):
+    try:
+        # Save the configuration
+        device.device.send_command_timing("write memory")
+
+        # Wait for the command to complete
+        time.sleep(10)
+
+        print("Configuration saved successfully")
+    except Exception as e:
+        print(f"An error occurred while saving the configuration: {e}")
