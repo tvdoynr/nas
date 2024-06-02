@@ -170,7 +170,7 @@ def switch_restore_backup(ip, username, password, backup_file):
         device.close()
 
 
-def create_vlan(ip, username, password, enable_password, vlan_id, vlan_name):
+def create_vlan(ip, username, password, vlan_id, vlan_name):
     driver = get_network_driver('ios')
     device = driver(ip, username, password)
     device.open()
@@ -178,7 +178,6 @@ def create_vlan(ip, username, password, enable_password, vlan_id, vlan_name):
     try:
         # Enter enable mode
         device.device.send_command_timing("enable")
-        device.device.send_command_timing(enable_password)
 
         # Enter configuration mode
         device.device.send_command_timing("configure terminal")
@@ -238,6 +237,50 @@ def create_route(ip, username, password, destination_network, subnet_mask, next_
     finally:
         device.close()
 
+
+def create_vlan_interface(ip, username, password, vlan_id, vlan_ip, vlan_subnet_mask):
+    driver = get_network_driver('ios')
+    device = driver(ip, username, password)
+    device.open()
+
+    try:
+        # Enter enable mode
+        print("Entering enable mode")
+        output = device.device.send_command_timing("enable")
+        print(output)
+
+        # Enter configuration mode
+        print("Entering configuration mode")
+        output = device.device.send_command_timing("configure terminal")
+        print(output)
+
+        # Construct the configuration commands to create a VLAN and VLAN interface
+        config_commands = [
+            f"interface vlan {vlan_id}",
+            f"ip address {vlan_ip} {vlan_subnet_mask}",
+            "no shutdown"
+        ]
+
+        # Execute each command using device.cli()
+        for command in config_commands:
+            print(f"Executing command: {command}")
+            output = device.device.send_command_timing(command)
+            print(output)
+
+        # Exit configuration mode
+        print("Exiting configuration mode")
+        output = device.device.send_command_timing("end")
+        print(output)
+
+        save_configuration(device)
+
+        print(f"VLAN {vlan_id} with IP {vlan_ip}/{vlan_subnet_mask} created successfully")
+
+    except Exception as e:
+        print(f"An error occurred while creating VLAN interface: {e}")
+
+    finally:
+        device.close()
 def save_configuration(device):
     try:
         # Save the configuration
