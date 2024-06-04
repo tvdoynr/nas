@@ -1,10 +1,14 @@
 import datetime
+import json
 import os
 import re
 import telnetlib
 import time
 
+from django.conf import settings
 from napalm import get_network_driver
+
+from network_automation.models import ConfigurationBackup
 
 
 def switch_get_info(ip, username, password, mode):
@@ -25,15 +29,15 @@ def switch_get_info(ip, username, password, mode):
     if mode == "v":
         vlans = device.get_vlans()
         result['vlans'] = vlans
-        # print("\nVLAN Brief:")
-        # print(json.dumps(vlans, indent=4))
+        print("\nVLAN Brief:")
+        print(json.dumps(vlans, indent=4))
 
     # show ip route
     if mode == "r":
         output = device.cli(['show ip route'])
         routing_table = output['show ip route']
-        # print("Routing Table:")
-        # print(routing_table)
+        print("Routing Table:")
+        print(routing_table)
 
         routes = []
         for line in routing_table.split('\n'):
@@ -87,7 +91,7 @@ def pc_telnet(ip, port, command):
     return command_output
 
 
-def switch_get_backup(ip, username, password, path):
+def switch_get_backup(ip, username, password):
     driver = get_network_driver('ios')
     device = driver(ip, username, password)
     device.open()
@@ -102,13 +106,15 @@ def switch_get_backup(ip, username, password, path):
         date = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         hostname = facts['hostname']
 
-        backup_path = os.path.join(path, 'backup_config')
+        backup_path = os.path.join(settings.STATICFILES_DIRS[0], 'backup_config')
         if not os.path.exists(backup_path):
             os.makedirs(backup_path)
 
         file_path = os.path.join(backup_path, f"{hostname}_{date}_running-config")
         with open(file_path, 'w') as file:
             file.write(run_config)
+
+
 
         device.close()
 
@@ -287,8 +293,17 @@ def save_configuration(device):
         device.device.send_command_timing("write memory")
 
         # Wait for the command to complete
-        time.sleep(10)
+        time.sleep(5)
 
         print("Configuration saved successfully")
     except Exception as e:
         print(f"An error occurred while saving the configuration: {e}")
+
+def subnet_mask_to_prefix(subnet_mask):
+    # Split the subnet mask into its octets
+    octets = subnet_mask.split('.')
+
+    # Convert each octet to binary and count the '1' bits
+    prefix_length = sum(bin(int(octet)).count('1') for octet in octets)
+
+    return str(prefix_length)

@@ -1,6 +1,10 @@
 # models.py
+import os
+
 from django.contrib.auth.models import User
 from django.db import models
+from django.utils import timezone
+
 
 class NetworkDevice(models.Model):
     name = models.CharField(max_length=100, null=True, blank=True)
@@ -39,21 +43,20 @@ class Interface(models.Model):
     switch = models.ForeignKey(Switch, related_name='interfaces', on_delete=models.CASCADE, null=True, blank=True)
     name = models.CharField(max_length=50, null=True, blank=True)
     ip_address = models.GenericIPAddressField(protocol='IPv4', null=True, blank=True)
-    status = models.CharField(max_length=10, null=True, blank=True)
-    protocol_status = models.CharField(max_length=10, null=True, blank=True)
-
+    mask = models.CharField(max_length=20, null=True, blank=True)
     def __str__(self):
         return f'{self.name} on {self.switch.name}'
+
 
 class Vlan(models.Model):
     switch = models.ForeignKey(Switch, related_name='vlans', on_delete=models.CASCADE, null=True, blank=True)
     vlan_id = models.PositiveIntegerField(null=True, blank=True)
     name = models.CharField(max_length=100, null=True, blank=True)
-    status = models.CharField(max_length=20, null=True, blank=True)
     ports = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return f'VLAN {self.vlan_id} ({self.name}) on {self.switch.name}'
+
 
 class Route(models.Model):
     switch = models.ForeignKey(Switch, related_name='routes', on_delete=models.CASCADE, null=True, blank=True)
@@ -62,7 +65,16 @@ class Route(models.Model):
     distance = models.CharField(max_length=50, null=True, blank=True)
     metric = models.CharField(max_length=50, null=True, blank=True)
     next_hop = models.CharField(max_length=50, blank=True, null=True)
-    interface = models.CharField(max_length=50, blank=True, null=True)
 
     def __str__(self):
         return f'Route to {self.network} via {self.interface} on {self.switch.name}'
+
+
+class ConfigurationBackup(models.Model):
+    def backup_file_name(instance, filename):
+        return '/'.join([str(instance.backup_date.year), str(instance.backup_date.month),
+                         str(instance.backup_date.day), os.path.basename(filename)])
+
+    switch = models.ForeignKey(Switch, related_name='backups', on_delete=models.CASCADE, null=True, blank=True)
+    backup_date = models.DateTimeField(default=timezone.now(), null=True, blank=True)
+    backup_file = models.FileField(null=True, blank=True)

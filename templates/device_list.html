@@ -19,36 +19,57 @@
             z-index: 1000;
             position: fixed;
             width: 100%;
-            background-color: #2193b0;
+            background: linear-gradient(60deg, rgb(39, 145, 175), #101cab);
             color: white;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
-        .navbar-brand, .nav-link {
+        .navbar-brand {
+            font-family: 'Arial Black', sans-serif;
+            font-size: 1.5em;
             color: white !important;
+        }
+
+        .nav-link {
+            color: white !important;
+            font-size: 1.2em;
+            transition: color 0.3s;
+        }
+
+        .nav-link:hover {
+            color: #d1ecf1 !important;
         }
 
         .sidebar {
             height: 100vh;
-            width: 150px;
+            width: 8%;
             position: fixed;
             top: 56px; /* Height of the navbar */
             left: 0;
-            background: linear-gradient(360deg, rgba(33, 146, 175, 0.43), #2192af);
+            background: linear-gradient(30deg, rgba(11, 32, 134, 0.43), #2192af);
             padding-top: 20px;
             box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
         }
 
         .sidebar a {
             padding: 15px;
-            text-align: center;
+
             display: block;
             color: white;
             text-decoration: none;
+            font-size: 1.1em;
+            transition: background-color 0.3s, color 0.3s;
+
         }
 
         .sidebar a:hover {
             background-color: #1e90ff;
+            color: #f4f7f6;
+        }
+
+        .sidebar a i {
+            margin-right: 10px;
+            font-size: 1em; /* Aynı boyutta olmaları için */
         }
 
         .content {
@@ -84,6 +105,7 @@
             z-index: -2;
             pointer-events: auto;
             float: left;
+
         }
 
 
@@ -118,7 +140,7 @@
             padding: 20px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             border-radius: 8px;
-            width: 20%;
+            width: 25%;
 
         }
 
@@ -138,6 +160,56 @@
         / / İlk başta gizli olacak
         }
 
+        #info-buttons {
+            flex-direction: column;
+            background-color: #17a1b7;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        #update-status {
+            flex-direction: column;
+            background-color: #fdc007;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        #backup-status {
+            flex-direction: column;
+            background-color: #db3545;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .info-buttons table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .info-buttons th, .info-buttons td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .info-buttons th {
+            background-color: #2193b0; /* Üst kısımdaki butonların rengi */
+            color: white;
+        }
+
+        .info-buttons td {
+            background-color: #2192af; /* Butonların rengiyle uyumlu */
+            color: white;
+        }
+
+        .info-buttons .success {
+            color: green;
+        }
+
+        .info-buttons .failure {
+            color: red;
+        }
+
 
     </style>
 </head>
@@ -152,17 +224,9 @@
     </button>
     <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ml-auto">
-            <li class="nav-item active">
-                <a class="nav-link" href="#">Home <span class="sr-only">(current)</span></a>
-            </li>
+
             <li class="nav-item">
-                <a class="nav-link" href="#">Features</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#">Pricing</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#">Logout</a>
+                <a class="nav-link" href="#">Logout <i class="fas fa-sign-out-alt"></i></a>
             </li>
         </ul>
     </div>
@@ -170,10 +234,12 @@
 
 <!-- Sidebar -->
 <div class="sidebar">
-    <a href="#" id="dashboard-link">Dashboard</a>
-    <a href="#" id="devices-link">Devices</a>
-    <a href="#">Settings</a>
+
+    <a href="#" id="dashboard-link"><i class="fas fa-home"></i> Dashboard</a>
+    <a href="#" id="devices-link"><i class="fas fa-list"></i> Devices</a>
+    <a href="#"><i class="fas fa-cogs"></i> Settings</a>
 </div>
+
 
 <!-- Page Content -->
 <div class="content">
@@ -182,21 +248,35 @@
     <div id="network"></div>
     <div id="tooltip-container" style="  display: none;">
         <div id="backDiv" style="display: none">
-            <button id="backButton" onclick="showDetails()">
+            <button id="backButton" onclick="backFunction()">
                 <i class="fas fa-arrow-left"></i></button>
         </div>
 
         <strong>Device Name:</strong> <span id="tooltip-name"></span>
 
-        <strong id="details" style="display: none">Details:</strong> <span style="display: none"
-                                                                           id="tooltip-details"></span><br>
-        <button onclick="showDetails()" class="btn btn-info" style="margin-top: 20px">General Information</button>
 
-        <button onclick="handleSetIPClick()" class="btn btn-success">Set IP</button>
+        <button id="deviceinfobutton" onclick="preDetails()" class="btn btn-info" style="margin-top: 20px">Device
+            Information
+        </button>
+
+        <div class="info-buttons" id="info-buttons" style="display: none">
+            <button id="generalinfobutton" class="btn btn-warning" onclick="showDetails(1)">General Information</button>
+            <button id="vlaninfobutton" class="btn btn-warning" onclick="showDetails(2)">Vlans</button>
+            <button id="interfacesinfobutton" class="btn btn-warning" onclick="showDetails(3)">Interfaces</button>
+            <button id="routesinfobutton" class="btn btn-warning" onclick="showDetails(4)">Routes</button>
+        </div>
+        <strong id="details" style="display: none">Details:</strong>
+        <span style="display: none" id="tooltip-details"></span>
+
+        <button id="setipbutton" onclick="handleSetIPClick()" class="btn btn-success">Set IP</button>
         <div id="ip-form" style="display: none;">
             <div class="form-group">
                 <label for="ip-address">IP Address:</label>
                 <input type="text" id="ip-address" class="form-control" placeholder="Enter IP address">
+            </div>
+            <div class="form-group">
+                <label for="mask">Mask:</label>
+                <input type="text" id="mask" class="form-control" placeholder="Enter Subnet Mask">
             </div>
             <div class="form-group">
                 <label for="gateway">Gateway:</label>
@@ -207,11 +287,93 @@
         </div>
 
 
-        <button class="btn btn-warning" onclick="updateFirmware()">Firmware Update</button>
+        <button id="configurebutton" class="btn btn-warning" onclick="updateFirmware()">Configure</button>
         <div id="update-status" style="display:none;">
-            <img src="{% static 'images/loading.gif' %}" alt="Updating"/> <!-- Yükleme ikonu -->
+            <button id="createvlanbutton" class="btn btn-success" onclick="handleCreateVlanClick()">Create Vlan</button>
+            <button id="createroutebutton" class="btn btn-success" onclick="handleCreateRouteClick()">Create Route
+            </button>
+            <button id="createinterfacebutton" class="btn btn-success" onclick="handleCreateInterfaceClick()">Create
+                Vlan Interface
+            </button>
+
+
         </div>
-        <button class="btn btn-danger">Backup</button>
+
+        <div id="vlan-form" style="display: none;">
+            <div class="form-group">
+                <label for="vlan-id">Vlan ID:</label>
+                <input type="text" id="vlan-id" class="form-control" placeholder="VLAN-ID">
+            </div>
+            <div class="form-group">
+                <label for="vlanname">Vlan Name:</label>
+                <input type="text" id="vlanname" class="form-control" placeholder="Enter VLAN name">
+            </div>
+
+
+            <button id="createVlanButton" class="btn btn-primary" onclick="createVlan()">Create</button>
+
+        </div>
+
+
+        <div id="route-form" style="display: none;">
+            <div class="form-group">
+                <label for="network_ip">Network :</label>
+                <input type="text" id="network_ip" class="form-control" placeholder="Network">
+            </div>
+            <div class="form-group">
+                <label for="subnet-mask">Subnet Mask:</label>
+                <input type="text" id="subnet-mask" class="form-control" placeholder="Enter SubnetMask">
+            </div>
+            <div class="form-group">
+                <label for="next-hop">Next Hop:</label>
+                <input type="text" id="next-hop" class="form-control" placeholder="Next Hop IP">
+            </div>
+
+            <button id="createRouteButton" class="btn btn-primary" onclick="createRoute()">Create</button>
+
+        </div>
+
+
+        <div id="interface-form" style="display: none;">
+            <div class="form-group">
+                <label for="interface-vlan-id">Interface Vlan ID :</label>
+                <input type="text" id="interface-vlan-id" class="form-control" placeholder="Vlan ID">
+            </div>
+            <div class="form-group">
+                <label for="interface-ip">Ip Address:</label>
+                <input type="text" id="interface-ip" class="form-control" placeholder="Enter Ip Address">
+            </div>
+            <div class="form-group">
+                <label for="interface-mask">Subnet Mask:</label>
+                <input type="text" id="interface-mask" class="form-control" placeholder="Enter Interface Subnet Mask">
+            </div>
+
+            <button id="createVlanInterfaceButton" class="btn btn-primary" onclick="createInterface()">Create</button>
+
+        </div>
+        <button id="backupbutton" class="btn btn-danger" onclick="backupHandle()">Backup</button>
+
+        <div id="backup-status" style="display:none;">
+            <button id="getbackupbutton" class="btn btn-warning" onclick="getBackUp()">Get Backup</button>
+            <button id="restorebackupbutton" class="btn btn-warning" onclick="backupRestoreHandle()">Restore Backup
+            </button>
+            <div class="info-buttons" id="restore-buttons" style="">
+                <table class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th>Device Name</th>
+                        <th>Date</th>
+                        <th></th>
+
+                    </tr>
+                    </thead>
+                    <tbody id="backup-rows">
+
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
     </div>
     <div id="device-list-container">
         <h1>Device List</h1>
@@ -238,6 +400,7 @@
                     <td colspan="4">No devices found.</td>
                 </tr>
             {% endfor %}
+            <!-- Diğer cihazlar burada listelenir -->
             </tbody>
         </table>
     </div>
@@ -272,18 +435,320 @@
 
     });
 
+    function addBackupRestoreClickHandlers() {
+        document.querySelectorAll("[id^='backup_']").forEach(button => {
+            button.addEventListener('click', function () {
+                var backupId = this.id.split('_')[1]; // Extract backup ID from the button ID
 
-    function updateFirmware() {
-        var updateStatus = document.getElementById('update-status');
+                $.ajax({
+                    url: '{% url "restore_backup" %}',  // Django URL for the view handling the backup restore
+                    type: 'POST',
+                    data: {
+                        'backup_id': backupId,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                    },
+                    success: function (response) {
+                        if (response.status === 'success') {
+                            alert('Backup restored successfully!');
+                            window.location.reload();  // Reload the page to reflect changes
+                        } else {
+                            alert('Failed to restore backup.');
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        console.log('AJAX Error: ' + status + error);
+                        alert('Error restoring backup.');
+                    }
+                });
+            });
+        });
+    }
+
+
+    function backupHandle() {
+        var backupStatus = document.getElementById('backup-status');
 
         var backDiv = document.getElementById('backDiv');
 
+        var infoButtons = document.getElementById('info-buttons');
+        infoButtons.style.display = "none";
+
+        var updateStatus = document.getElementById('update-status');
+        updateStatus.style.display = "none";
+
+
+        backDiv.style.display = "block";
+
+        backupStatus.style.display = "block";
+
+
+        document.getElementById("backup-status").style.display = 'flex';
+        document.getElementById("getbackupbutton").style.display = 'block';
+        document.getElementById("restorebackupbutton").style.display = 'block';
+        showBackupDetails();
+    }
+
+    function backupRestoreHandle() {
+        var restoreButtonsDiv = document.getElementById('restore-buttons');
+        restoreButtonsDiv.style.display = "flex";
+
+
+        console.log("backuprestore ");
+    }
+
+    function updateFirmware() {
+        var updateStatus = document.getElementById('update-status');
+        var infoButtons = document.getElementById('info-buttons');
+        infoButtons.style.display = "none";
+
+        var backupStatus = document.getElementById('backup-status');
+        backupStatus.style.display = "none";
+
+        var backDiv = document.getElementById('backDiv');
         var SaveButton = document.getElementById('SaveButton');
 
         backDiv.style.display = "block";
 
         updateStatus.style.display = "block";
 
+
+        document.getElementById("update-status").style.display = 'flex';
+        document.getElementById("createvlanbutton").style.display = 'block';
+        document.getElementById("createroutebutton").style.display = 'block';
+        document.getElementById("createinterfacebutton").style.display = 'block';
+
+
+    }
+
+    function showBackupDetails() {
+        var backupStatus = document.getElementById('backup-status');
+        var restoreButtonsDiv = document.getElementById('restore-buttons');
+        var backupRows = document.getElementById('backup-rows');
+
+        // Clear existing rows
+        backupRows.innerHTML = '';
+        console.log({{ backups|safe }});
+        console.log("id", nodeDetails.id);
+        let backups =
+        {{ backups|safe }}
+
+        var filteredBackups = backups.filter(backup => backup.fields.switch === nodeDetails.id);
+        console.log('filteredBackups', filteredBackups);
+
+        if (filteredBackups.length === 0) {
+            backupRows.innerHTML = '<tr><td colspan="3">No backups found for this switch.</td></tr>';
+        } else {
+            filteredBackups.forEach(backup => {
+                var filePath = backup.fields.backup_file.replace('C:\\Users\\alp\\PycharmProjects\\nas\\static\\', '/static/').replace(/\\/g, '/');
+                var backup_id = backup.pk;
+                console.log(backup_id)
+                var row = `
+                    <tr>
+                        <td><a href="${filePath}" download style="color: #ffffff">Download Backup</a></td>
+                        <td>${new Date(backup.fields.backup_date).toLocaleString()}</td>
+                        <td><button id="backup_${backup_id}" class="btn btn-success btn-sm"><i class="fas fa-arrow-right"></i></button></td>
+                    </tr>
+                `;
+                backupRows.innerHTML += row;
+            });
+        }
+
+        addBackupRestoreClickHandlers();
+
+        backupStatus.style.display = 'block';
+        restoreButtonsDiv.style.display = 'block';
+        document.getElementById("backup-status").style.display = 'flex';
+        document.getElementById("getbackupbutton").style.display = 'block';
+        document.getElementById("restorebackupbutton").style.display = 'block';
+    }
+
+    function restoreBackup1() {
+
+
+        /*  BACKUP 1 YERİİİİİ    */
+    }
+
+    function restoreBackup2() {
+
+
+        /*  BACKUP2  YERİİİİİ    */
+    }
+
+    function getBackUp() {
+        var switchId = nodeDetails.id;
+
+        $.ajax({
+            url: '{% url "get_backup" %}',  // Django URL for the view handling the backup download
+            type: 'POST',
+            data: {
+                'switch_id': switchId,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function (response) {
+                if (response.status === 'success') {
+                    setTimeout(function () {
+                        window.location.reload();
+                    }, 10);
+                    {#window.location.href = response.download_url;  // Redirect to the file download URL#}
+                } else {
+                    alert('Failed to get backup.');
+                }
+            },
+            error: function (xhr, status, error) {
+                console.log('AJAX Error: ' + status + error);
+                alert('Error getting backup.');
+            }
+        });
+    }
+
+    function createInterface() {
+        var interfaceID = document.getElementById('interface-vlan-id').value;
+        var interfaceIP = document.getElementById('interface-ip').value;
+        var interfaceMask = document.getElementById('interface-mask').value;
+        var switch_id = document.getElementById('createVlanInterfaceButton').getAttribute('data-switch-id');
+
+        $.ajax({
+            url: '{% url "create_vlan_interface" %}',
+            type: 'POST',
+            data: {
+                'switch_id': switch_id,
+                'interface_id': interfaceID,
+                'interface_ip': interfaceIP,
+                'interface_mask': interfaceMask,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'  // CSRF token ekleme
+            },
+            success: function (response) {
+                if (response.status === 'success') {
+                    alert('Interface created successfully!');
+                    console.log(response);
+                    setTimeout(function () {
+                        window.location.reload();
+                    }, 10);
+                } else {
+                    alert('Failed to create interface.');
+                }
+            },
+            error: function (xhr, status, error) {
+                console.log('AJAX Error: ' + status + error);
+                alert('Error creating interface.');
+            }
+        });
+    }
+
+    function createVlan() {
+        var vlanid = document.getElementById('vlan-id').value;
+        var vlanname = document.getElementById('vlanname').value;
+        var switchID = document.getElementById('createVlanButton').getAttribute('data-switch-id');
+
+        $.ajax({
+            url: '{% url "create_vlan" %}',  // Django'daki URL yönlendirmesi
+            type: 'POST',
+            data: {
+                'switch_id': switchID,
+                'vlan_id': vlanid,
+                'vlan_name': vlanname,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'  // CSRF token ekleme
+            },
+            success: function (response) {
+                if (response.status === 'success') {
+                    alert('VLAN created successfully!');
+                    setTimeout(function () {
+                        window.location.reload();
+                    }, 10);
+                    console.log(response);
+                } else {
+                    alert('Failed to create VLAN.');
+                }
+            },
+            error: function (xhr, status, error) {
+                console.log('AJAX Error: ' + status + error);
+                alert('Error creating VLAN.');
+            }
+        });
+    }
+
+    function createRoute() {
+        var networkIP = document.getElementById('network_ip').value;
+        var subnetmask = document.getElementById('subnet-mask').value;
+        var nexthop = document.getElementById('next-hop').value;
+        var switchID = document.getElementById('createRouteButton').getAttribute('data-switch-id');
+
+        $.ajax({
+            url: '{% url "create_route" %}',  // Django'daki URL yönlendirmesi
+            type: 'POST',
+            data: {
+                'switch_id': switchID,
+                'network_ip': networkIP,
+                'subnet_mask': subnetmask,
+                'next_hop': nexthop,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'  // CSRF token ekleme
+            },
+            success: function (response) {
+                if (response.status === 'success') {
+                    alert('Route created successfully!');
+                    console.log(response);
+                } else {
+                    alert('Failed to create route.');
+                    setTimeout(function () {
+                        window.location.reload();
+                    }, 10);
+                }
+            },
+            error: function (xhr, status, error) {
+                console.log('AJAX Error: ' + status + error);
+                alert('Error creating route.');
+            }
+        });
+    }
+
+
+    function saveIP() {
+        var ipAddress = document.getElementById('ip-address').value;
+        var gateway = document.getElementById('gateway').value;
+        var mask = document.getElementById('mask').value;
+        var pcId = document.getElementById('SaveButton').getAttribute('data-pc-id');
+
+        $.ajax({
+            url: '{% url "pc_set_ip" %}',  // Django URL'ye gönderme
+            type: 'POST',
+            data: {
+                'pc_id': pcId,
+                'ip_address': ipAddress,
+                'default_gateway': gateway,
+                'mask': mask,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'  // CSRF token ekleme
+            },
+            success: function (response) {
+                alert('IP Configuration Saved Successfully!');
+                setTimeout(function () {
+                        window.location.reload();
+                    }, 10);
+
+            },
+            error: function () {
+                alert('Error saving IP configuration.');
+            }
+        });
+    }
+
+    function handleCreateInterfaceClick() {
+        var InterfaceForm = document.getElementById('interface-form');
+
+        var UpdateStatus = document.getElementById('update-status');
+
+        var backDiv = document.getElementById('backDiv');
+
+        var CreateButton = document.getElementById('createVlanInterfaceButton');
+
+        backDiv.style.display = "block";
+
+        InterfaceForm.style.display = "block";
+
+        UpdateStatus.style.display = "none";
+
+        CreateButton.setAttribute('data-switch-id', nodeDetails.id);
+
+        // Diğer butonları gizle
         var buttons = document.querySelectorAll('#tooltip-container button');
         buttons.forEach(button => {
 
@@ -293,57 +758,67 @@
 
         });
 
-
-        // AJAX isteği ile firmware güncellemesi yap
-        /*$.ajax({
-        url: '/path/to/device-firmware-update/', // Gerçek URL ile değiştirin
-        method: 'POST',
-        data: {
-        // Gerekli verileri gönder
-        'device_id': selectedDeviceId, // Seçili cihazın ID'si, bu değeri nasıl aldığınıza bağlı olarak değişir
-        'csrfmiddlewaretoken': '
-
-
-        {{ csrf_token }}'
-            },
-            success: function(response) {
-            // İşlem başarılı ise
-            document.getElementById('update-status').innerHTML = 'Done!';
-            },
-            error: function() {
-            // Hata durumunda
-            document.getElementById('update-status').innerHTML = 'Error updating firmware!';
-            },
-            complete: function() {
-            // Her durumda yükleme ikonunu bir süre sonra gizle
-            setTimeout(function() {
-                document.getElementById('update-status').style.display = 'none';
-            }, 2000);
-            }
-            });*/
+        CreateButton.style.display = "block";
     }
 
+    function handleCreateRouteClick() {
+        var RouteForm = document.getElementById('route-form');
 
-    function saveIP() {
-        var ipAddress = document.getElementById('ip-address').value;
-        var gateway = document.getElementById('gateway').value;
+        var UpdateStatus = document.getElementById('update-status');
 
-        $.ajax({
-            url: '/save-ip/',  // Django URL'ye gönderme
-            type: 'POST',
-            data: {
-                'ip_address': ipAddress,
-                'gateway': gateway,
-                'csrfmiddlewaretoken': '{{ csrf_token }}'  // CSRF token ekleme
-            },
-            success: function (response) {
-                alert('IP Configuration Saved Successfully!');
+        var backDiv = document.getElementById('backDiv');
 
-            },
-            error: function () {
-                alert('Error saving IP configuration.');
+        var CreateButton = document.getElementById('createRouteButton');
+
+        backDiv.style.display = "block";
+
+        RouteForm.style.display = "block";
+
+        UpdateStatus.style.display = "none";
+
+        CreateButton.setAttribute('data-switch-id', nodeDetails.id);
+
+        // Diğer butonları gizle
+        var buttons = document.querySelectorAll('#tooltip-container button');
+        buttons.forEach(button => {
+
+            if (button.id !== "backButton") {
+                button.style.display = 'none';
             }
+
         });
+
+        CreateButton.style.display = "block";
+    }
+
+    function handleCreateVlanClick() {
+        var VlanForm = document.getElementById('vlan-form');
+
+        var UpdateStatus = document.getElementById('update-status');
+
+        var backDiv = document.getElementById('backDiv');
+
+        var CreateButton = document.getElementById('createVlanButton');
+
+        backDiv.style.display = "block";
+
+        VlanForm.style.display = "block";
+
+        UpdateStatus.style.display = "none";
+
+        CreateButton.setAttribute('data-switch-id', nodeDetails.id);
+
+        // Diğer butonları gizle
+        var buttons = document.querySelectorAll('#tooltip-container button');
+        buttons.forEach(button => {
+
+            if (button.id !== "backButton") {
+                button.style.display = 'none';
+            }
+
+        });
+
+        CreateButton.style.display = "block";
     }
 
     function handleSetIPClick() {
@@ -356,6 +831,8 @@
         backDiv.style.display = "block";
 
         IpForm.style.display = "block";
+
+        SaveButton.setAttribute('data-pc-id', nodeDetails.id);
 
 
         // Diğer butonları gizle
@@ -375,11 +852,34 @@
     var backButton = document.getElementById('backButton');
     backButton.onclick = backFunction;
 
-    function showDetails() {
+    function preDetails() {
+        if (nodeDetails.type === 'switch') {
+
+            document.getElementById("info-buttons").style.display = 'flex';
+            document.getElementById("generalinfobutton").style.display = 'block';
+            document.getElementById("vlaninfobutton").style.display = 'block';
+            document.getElementById("interfacesinfobutton").style.display = 'block';
+            document.getElementById("routesinfobutton").style.display = 'block';
+
+
+            var updateStatus = document.getElementById('update-status');
+            updateStatus.style.display = "none";
+
+            var backupStatus = document.getElementById('backup-status');
+            backupStatus.style.display = "none";
+
+
+        } else if (nodeDetails.type === 'pc') {
+            showDetails(1);
+        }
+    }
+
+    function showDetails(x) {
         // Details başlığını ve içeriğini göster
         var detail = document.getElementById('details');
 
-
+        var infoButtonsDiv = document.getElementById('info-buttons');
+        infoButtonsDiv.style.display = "none";
         var details = document.getElementById('tooltip-details');
 
         var backDiv = document.getElementById('backDiv');
@@ -399,12 +899,161 @@
 
 
             });
+
         }
+
+
+        if (x === 1) {
+            showGeneralDetails();
+        }
+        if (x === 2) {
+            showVlanDetails();
+        }
+        if (x === 3) {
+            showInterfaceDetails();
+        }
+        if (x === 4) {
+            showRoutesDetails();
+        }
+
+    }
+
+    function showGeneralDetails() {
+
+
+        document.getElementById('tooltip-details').innerHTML = formatTooltipDetails(nodeDetails.title);
+    }
+
+    let vlanData = {{ vlan_datas|safe }};
+    let interfaceData = {{ interface_datas|safe }};
+    let routeData = {{ route_datas|safe }};
+
+
+    function showVlanDetails() {
+        console.log("nodeid", nodeDetails.id)
+        var filteredVlans = vlanData.filter(vlan => vlan.switch_id === nodeDetails.id);
+        console.log("filteredvlans", filteredVlans)
+        if (filteredVlans.length === 0) {
+            document.getElementById('tooltip-details').innerHTML = "No VLANs found for this switch.";
+        } else {
+            var details = filteredVlans.map(vlan => `
+                <div>
+                    <strong>VLAN ID:</strong> ${vlan.vlan_id}<br>
+                    <strong>Name:</strong> ${vlan.name}<br>
+                    <strong>Ports:</strong> ${vlan.ports}<br><br>
+                </div>
+            `).join('');
+            document.getElementById('tooltip-details').innerHTML = details;
+        }
+
+        document.getElementById('details').style.display = 'block';
+        document.getElementById('tooltip-details').style.display = 'block';
+
+        // Hide other buttons and display the back button
+        var buttons = document.querySelectorAll('#tooltip-container button');
+        buttons.forEach(button => {
+            if (button.id !== "backButton") {
+                button.style.display = 'none';
+            }
+        });
+        document.getElementById('backDiv').style.display = 'block';
+    }
+
+    function showInterfaceDetails() {
+        console.log("nodeid", nodeDetails.id)
+        var filteredInterfaces = interfaceData.filter(interfaces => interfaces.switch_id === nodeDetails.id);
+        console.log("filteredint", filteredInterfaces)
+        if (filteredInterfaces.length === 0) {
+            document.getElementById('tooltip-details').innerHTML = "No Interfaces found for this switch.";
+        } else {
+            var details = filteredInterfaces.map(interface => `
+                <div>
+                    <strong>Name:</strong> ${interface.name}<br>
+                    <strong>Ip Address:</strong> ${interface.ip_address}<br><br>
+                </div>
+            `).join('');
+            document.getElementById('tooltip-details').innerHTML = details;
+        }
+
+
+        document.getElementById('details').style.display = 'block';
+        document.getElementById('tooltip-details').style.display = 'block';
+
+        // Hide other buttons and display the back button
+        var buttons = document.querySelectorAll('#tooltip-container button');
+        buttons.forEach(button => {
+            if (button.id !== "backButton") {
+                button.style.display = 'none';
+            }
+        });
+        document.getElementById('backDiv').style.display = 'block';
+
+        {#var detailsContent = convertNewlinesToBreaks(nodeDetails.title)#}
+        {#document.getElementById('tooltip-details').innerHTML = "interface";#}
+    }
+
+    function showRoutesDetails() {
+        console.log("nodeid", nodeDetails.id)
+        var filteredRoutes = routeData.filter(routes => routes.switch_id === nodeDetails.id);
+        console.log("filteredint", filteredRoutes)
+        if (filteredRoutes.length === 0) {
+            document.getElementById('tooltip-details').innerHTML = "No Interfaces found for this switch.";
+        } else {
+            var details = filteredRoutes.map(route => `
+                <div>
+                    <strong>Network: </strong> ${route.network}<br>
+                    <strong>Next Hop: </strong> ${route.next_hop}<br>
+                    <strong>Protocol: ${route.protocol}</strong>
+                </div>
+            `).join('');
+            document.getElementById('tooltip-details').innerHTML = details;
+        }
+
+
+        document.getElementById('details').style.display = 'block';
+        document.getElementById('tooltip-details').style.display = 'block';
+
+        // Hide other buttons and display the back button
+        var buttons = document.querySelectorAll('#tooltip-container button');
+        buttons.forEach(button => {
+            if (button.id !== "backButton") {
+                button.style.display = 'none';
+            }
+        });
+        document.getElementById('backDiv').style.display = 'block';
+
+        {#var detailsContent = convertNewlinesToBreaks(nodeDetails.title)#}
+        {#document.getElementById('tooltip-details').innerHTML = "routes";#}
     }
 
 
     function backFunction() {
         // Tooltip detaylarını gizle
+
+        if (nodeDetails.type === 'switch') {
+
+            document.getElementById("deviceinfobutton").style.display = 'block'; // General Information
+            document.getElementById("setipbutton").style.display = 'none';
+            document.getElementById("configurebutton").style.display = 'block';
+            document.getElementById("backupbutton").style.display = 'block';
+
+
+        } else if (nodeDetails.type === 'pc') {
+            document.getElementById("deviceinfobutton").style.display = 'block'; // General Information
+            document.getElementById("setipbutton").style.display = 'block'; // Set IP
+            document.getElementById("configurebutton").style.display = 'none';
+            document.getElementById("backupbutton").style.display = 'none';
+        }
+
+        var infoButtons = document.getElementById('info-buttons');
+        infoButtons.style.display = "none";
+
+        var updateStatu = document.getElementById('update-status');
+        updateStatu.style.display = "none";
+
+        var backupStatu = document.getElementById('backup-status');
+        backupStatu.style.display = "none";
+
         var details = document.getElementById('tooltip-details');
         details.style.display = 'none';
 
@@ -414,13 +1063,25 @@
         var IpForm = document.getElementById('ip-form');
         IpForm.style.display = "none";
 
+        var vlanForm = document.getElementById('vlan-form');
+        vlanForm.style.display = "none";
+
+        var routeForm = document.getElementById('route-form');
+        routeForm.style.display = "none";
+
+        var interfaceForm = document.getElementById('interface-form');
+        interfaceForm.style.display = "none";
+
+        var infoButtonsDiv = document.getElementById('info-buttons');
+        infoButtonsDiv.style.display = "none";
         var updateStatus = document.getElementById('update-status');
         updateStatus.style.display = "none";
+
+
+        var backupStatus = document.getElementById('backup-status');
+        backupStatus.style.display = "none";
         // Diğer butonları görünür yap
-        var otherButtons = document.querySelectorAll('#tooltip-container button:not(:first-child)');
-        otherButtons.forEach(button => {
-            button.style.display = 'block';
-        });
+
 
         var backDiv = document.getElementById('backDiv');
 
@@ -429,39 +1090,24 @@
     }
 
 
+    function formatTooltipDetails(details) {
+        // Detayları başlık ve içerik olarak böl
+        var lines = details.split('\n');
+        var formattedDetails = '';
+
+        lines.forEach(line => {
+            var parts = line.split(':');
+            if (parts.length === 2) {
+                formattedDetails += `<strong>${parts[0].trim()}:</strong> ${parts[1].trim()}<br>`;
+            }
+        });
+
+        return formattedDetails;
+    }
+
+
     var nodes = new vis.DataSet({{ nodes|safe }});
     var edges = new vis.DataSet({{ edges|safe }});
-
-    {#var nodes = new vis.DataSet([#}
-    {#    {id: 1, label: 'Backbone Switch', title: 'Backbone Switch\nIP: 10.0.0.1\nSSH: admin', image: '{% static "images/backbone.jpg" %}', shape: 'image', size: 30},#}
-    {#    {id: 2, label: 'Switch 1', title: 'Switch 1\nIP: 10.0.1.1\nSSH: admin', image: '{% static "images/Switch.png" %}', shape: 'image', size: 50},#}
-    {#    {id: 3, label: 'Switch 2', title: 'Switch 2\nIP: 10.0.2.1\nSSH: admin', image: '{% static "images/Switch.png" %}', shape: 'image', size: 50},#}
-    {#    {id: 4, label: 'Switch 3', title: 'Switch 3\nIP: 10.0.3.1\nSSH: admin', image: '{% static "images/Switch.png" %}', shape: 'image', size: 50},#}
-    {#    {id: 5, label: 'PC 1-1', title: 'PC 1-1\nIP: 10.0.1.2\nSSH: user', image: '{% static "images/pc.jpg" %}', shape: 'image', size: 30},#}
-    {#    {id: 6, label: 'PC 1-2', title: 'PC 1-2\nIP: 10.0.1.3\nSSH: user', image: '{% static "images/pc.jpg" %}', shape: 'image', size: 30},#}
-    {#    {id: 7, label: 'PC 1-3', title: 'PC 1-3\nIP: 10.0.1.4\nSSH: user', image: '{% static "images/pc.jpg" %}', shape: 'image', size: 30},#}
-    {#    {id: 8, label: 'PC 2-1', title: 'PC 2-1\nIP: 10.0.2.2\nSSH: user', image: '{% static "images/pc.jpg" %}', shape: 'image', size: 30},#}
-    {#    {id: 9, label: 'PC 2-2', title: 'PC 2-2\nIP: 10.0.2.3\nSSH: user', image: '{% static "images/pc.jpg" %}', shape: 'image', size: 30},#}
-    {#    {id: 10, label: 'PC 2-3', title: 'PC 2-3\nIP: 10.0.2.4\nSSH: user', image: '{% static "images/pc.jpg" %}', shape: 'image', size: 30},#}
-    {#    {id: 11, label: 'PC 3-1', title: 'PC 3-1\nIP: 10.0.3.2\nSSH: user', image: '{% static "images/pc.jpg" %}', shape: 'image', size: 30},#}
-    {#    {id: 12, label: 'PC 3-2', title: 'PC 3-2\nIP: 10.0.3.3\nSSH: user', image: '{% static "images/pc.jpg" %}', shape: 'image', size: 30},#}
-    {#    {id: 13, label: 'PC 3-3', title: 'PC 3-3\nIP: 10.0.3.4\nSSH: user', image: '{% static "images/pc.jpg" %}', shape: 'image', size: 30}#}
-    {#]);#}
-    {##}
-    {#var edges = new vis.DataSet([#}
-    {#    {from: 1, to: 2},#}
-    {#    {from: 1, to: 3},#}
-    {#    {from: 1, to: 4},#}
-    {#    {from: 2, to: 5},#}
-    {#    {from: 2, to: 6},#}
-    {#    {from: 2, to: 7},#}
-    {#    {from: 3, to: 8},#}
-    {#    {from: 3, to: 9},#}
-    {#    {from: 3, to: 10},#}
-    {#    {from: 4, to: 11},#}
-    {#    {from: 4, to: 12},#}
-    {#    {from: 4, to: 13}#}
-    {#]);#}
 
     var container = document.getElementById('network');
     var data = {
@@ -477,18 +1123,28 @@
             }
         },
         edges: {
-            width: 3
+            width: 3,
+            length: 150,
+            font: {
+                align: 'top'
+            }
+        },
+        layout: {
+            hierarchical: {
+                direction: 'UD',
+                sortMethod: 'directed',
+                nodeSpacing: 200,
+                levelSeparation: 200
+            }
         },
         physics: {
-            enabled: true
+            enabled: false
         },
         interaction: {
             dragNodes: true,
             dragView: true,
             zoomView: true
         }
-
-
     };
     var network = new vis.Network(container, data, options);
 
@@ -525,18 +1181,27 @@
         document.getElementById('tooltip-container').style.display = 'none';
     });
 
-    network.on("click", function (params) {
+    var nodeDetails;
+
+     network.on("click", function (params) {
         if (params.nodes.length > 0) {
-            var nodeDetails = nodes.get(params.nodes[0]);
+            nodeDetails = nodes.get(params.nodes[0]);
             document.getElementById('tooltip-name').textContent = nodeDetails.label;
-            var detailsContent = convertNewlinesToBreaks(nodeDetails.title)
-            document.getElementById('tooltip-details').innerHTML = detailsContent;
             document.getElementById('tooltip-container').style.display = 'flex';
 
+            if (nodeDetails.type === 'switch') {
+                document.getElementById("deviceinfobutton").style.display = 'block'; // General Information
+                document.getElementById("setipbutton").style.display = 'none';
+                document.getElementById("configurebutton").style.display = 'block';
+                document.getElementById("backupbutton").style.display = 'block';
+            } else if (nodeDetails.type === 'pc') {
+                document.getElementById("deviceinfobutton").style.display = 'block'; // General Information
+                document.getElementById("setipbutton").style.display = 'block'; // Set IP
+                document.getElementById("configurebutton").style.display = 'none';
+                document.getElementById("backupbutton").style.display = 'none';
+            }
             backFunction();
-
         }
-
     });
 
 
