@@ -14,3 +14,5 @@ projeyi localhostta görmek için bu komutu girip
 "python manage.py runserver"
 
 daha sonra localhost:8000 veya 127.0.0.1:8000 diyerek erişebilirsin
+
+https://dosya.co/i9ow6qlfelkr/nas_final_version.gns3project.html
