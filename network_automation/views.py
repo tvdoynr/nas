@@ -2,15 +2,14 @@ import json
 
 from django.contrib.auth import logout
 from django.core.serializers import serialize
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.views import View
 from django.contrib.auth.mixins import LoginRequiredMixin
-from napalm import get_network_driver
-from .napalm_utilities import switch_get_info, switch_get_backup, pc_telnet, create_vlan, subnet_mask_to_prefix, \
+from .napalm_utilities import switch_get_backup, pc_telnet, create_vlan, subnet_mask_to_prefix, \
     create_route, create_vlan_interface, switch_restore_backup, refresh_switch_info, is_valid_ipv4, is_valid_subnet_mask
-from .models import NetworkDevice, Switch, PC, Vlan, Interface, Route, ConfigurationBackup
+from .models import Switch, PC, Vlan, Interface, Route, ConfigurationBackup, DeviceLog
 
 
 class DeviceListView(LoginRequiredMixin, View):
@@ -74,9 +73,9 @@ class DeviceListView(LoginRequiredMixin, View):
             'route_datas': json.dumps(list(route_datas.values())),
             'backups': serialize('json', backups),
         }
-        print(context)
 
         return render(request, 'device_list.html', context)
+
 
 class PCSetIPView(LoginRequiredMixin, View):
     def post(self, request):
@@ -103,18 +102,21 @@ class PCSetIPView(LoginRequiredMixin, View):
         pc_object = PC.objects.filter(id=pc_id).first()
         pc_port = pcs_port.get(pc_object.name)
         try:
-            ip_flag = pc_telnet("127.0.0.1", pc_port, f"ip {ip_address} {mask} {default_gateway if default_gateway else ''}")
-            if not ip_flag:
-                PC.objects.filter(id=pc_id).update(
-                    ip_address=ip_address,
-                    default_gateway=default_gateway if default_gateway else '',
-                    mask=mask,
-                )
-            else:
-                return JsonResponse({'status': 'false'}, status=500)
+            pc_telnet("127.0.0.1", pc_port, f"ip {ip_address} {mask} {default_gateway if default_gateway else ''}")
+            PC.objects.filter(id=pc_id).update(
+                ip_address=ip_address,
+                default_gateway=default_gateway if default_gateway else '',
+                mask=mask,
+            )
+
+            DeviceLog.objects.create(
+                user=request.user,
+                pc=pc_object,
+                action='Set IP',
+                details=f'Set IP to {ip_address}, mask to {mask}, and default gateway to {default_gateway}'
+            )
         except Exception as e:
-            print(str(e))
-            return JsonResponse({'status':'false','message':str(e)}, status=500)
+            return JsonResponse({'status': 'false', 'message': str(e)}, status=500)
         return JsonResponse({'status': 'success'})
 
 
@@ -124,13 +126,23 @@ class SwitchCreateVlanView(LoginRequiredMixin, View):
         vlan_id = request.POST.get('vlan_id')
         vlan_name = request.POST.get('vlan_name')
         switch_obj = Switch.objects.filter(id=switch_id).first()
-        create_vlan(switch_obj.ip_address, switch_obj.ssh_username, switch_obj.ssh_password, vlan_id, vlan_name)
-        Vlan.objects.create(
-            vlan_id=vlan_id,
-            name=vlan_name,
-            switch_id=switch_id,
-            ports="",
-        )
+        try:
+            create_vlan(switch_obj.ip_address, switch_obj.ssh_username, switch_obj.ssh_password, vlan_id, vlan_name)
+            Vlan.objects.create(
+                vlan_id=vlan_id,
+                name=vlan_name,
+                switch_id=switch_id,
+                ports="",
+            )
+
+            DeviceLog.objects.create(
+                user=request.user,
+                switch=switch_obj,
+                action='Create VLAN',
+                details=f'Created VLAN {vlan_id} ({vlan_name})'
+            )
+        except Exception as e:
+            return JsonResponse({'status': 'false', 'message': str(e)}, status=500)
         return JsonResponse({'status': 'success'})
 
 
@@ -146,18 +158,30 @@ class SwitchCreateRouteView(LoginRequiredMixin, View):
 
         subnet_prefix = subnet_mask_to_prefix(subnet_mask)
         next_hop = request.POST.get('next_hop')
-        network= network_ip + "/" + subnet_prefix
+        network = network_ip + "/" + subnet_prefix
         switch_obj = get_object_or_404(Switch, id=switch_id)
-        create_route(switch_obj.ip_address, switch_obj.ssh_username, switch_obj.ssh_password, network_ip, subnet_mask, next_hop)
+        try:
+            create_route(switch_obj.ip_address, switch_obj.ssh_username, switch_obj.ssh_password, network_ip,
+                         subnet_mask,
+                         next_hop)
 
-        Route.objects.create(
-            switch_id=switch_obj.id,
-            protocol="S",
-            network=network,
-            distance=1,
-            metric=0,
-            next_hop=next_hop
-        )
+            Route.objects.create(
+                switch_id=switch_obj.id,
+                protocol="S",
+                network=network,
+                distance=1,
+                metric=0,
+                next_hop=next_hop
+            )
+
+            DeviceLog.objects.create(
+                user=request.user,
+                switch=switch_obj,
+                action='Create Route',
+                details=f'Created route to {network} via {next_hop}'
+            )
+        except Exception as e:
+            return JsonResponse({'status': 'false', 'message': str(e)}, status=500)
 
         return JsonResponse({'status': 'success'})
 
@@ -176,13 +200,25 @@ class SwitchCreateVlanInterfaceView(LoginRequiredMixin, View):
         subnet_prefix = subnet_mask_to_prefix(interface_mask)
         switch_obj = get_object_or_404(Switch, id=switch_id)
 
-        create_vlan_interface(switch_obj.ip_address, switch_obj.ssh_username, switch_obj.ssh_password, interface_id, interface_ip, interface_mask)
-        Interface.objects.create(
-            switch_id=switch_id,
-            name=f"Vlan{interface_id}",
-            ip_address=interface_ip,
-            mask=subnet_prefix,
-        )
+        try:
+            create_vlan_interface(switch_obj.ip_address, switch_obj.ssh_username, switch_obj.ssh_password, interface_id,
+                                  interface_ip, interface_mask)
+            Interface.objects.create(
+                switch_id=switch_id,
+                name=f"Vlan{interface_id}",
+                ip_address=interface_ip,
+                mask=subnet_prefix,
+            )
+
+            DeviceLog.objects.create(
+                user=request.user,
+                switch=switch_obj,
+                action='Create VLAN Interface',
+                details=f'Created VLAN interface {interface_id} with IP {interface_ip}/{subnet_prefix}'
+            )
+        except Exception as e:
+            return JsonResponse({'status': 'false', 'message': str(e)}, status=500)
+
         return JsonResponse({'status': 'success'})
 
 
@@ -190,12 +226,24 @@ class GetBackupView(LoginRequiredMixin, View):
     def post(self, request):
         switch_id = request.POST.get('switch_id')
         switch_obj = get_object_or_404(Switch, id=switch_id)
-        file_path = switch_get_backup(switch_obj.ip_address, switch_obj.ssh_username, switch_obj.ssh_password)
 
-        ConfigurationBackup.objects.create(
-            switch_id=switch_id,
-            backup_file=file_path,
-        ).save()
+        try:
+            file_path = switch_get_backup(switch_obj.ip_address, switch_obj.ssh_username, switch_obj.ssh_password)
+
+            ConfigurationBackup.objects.create(
+                switch_id=switch_id,
+                backup_file=file_path,
+            ).save()
+
+            DeviceLog.objects.create(
+                user=request.user,
+                switch=switch_obj,
+                action='Backup Configuration',
+                details=f'Backed up configuration to {file_path}'
+            )
+        except Exception as e:
+            return JsonResponse({'status': 'false', 'message': str(e)}, status=500)
+
         return JsonResponse({'status': 'success'})
 
 
@@ -203,14 +251,49 @@ class RestoreBackupView(LoginRequiredMixin, View):
     def post(self, request):
         backup_id = request.POST.get('backup_id')
         backup_obj = get_object_or_404(ConfigurationBackup, id=backup_id)
-        switch_restore_backup(backup_obj.switch.ip_address,
-                              backup_obj.switch.ssh_username,
-                              backup_obj.switch.ssh_password,
-                              backup_obj.backup_file.path)
 
-        refresh_switch_info(backup_obj.switch)
+        try:
+            switch_restore_backup(backup_obj.switch.ip_address,
+                                  backup_obj.switch.ssh_username,
+                                  backup_obj.switch.ssh_password,
+                                  backup_obj.backup_file.path)
+
+            refresh_switch_info(backup_obj.switch)
+
+            DeviceLog.objects.create(
+                user=request.user,
+                switch=backup_obj.switch,
+                action='Restore Configuration',
+                details=f'Restored configuration from {backup_obj.backup_file.path}'
+            )
+        except Exception as e:
+            return JsonResponse({'status': 'false', 'message': str(e)}, status=500)
 
         return JsonResponse({'status': 'success'})
+
+
+class DownloadLogView(LoginRequiredMixin, View):
+    def get(self, request, device_type, device_id):
+        if device_type == 'switch':
+            device = get_object_or_404(Switch, id=device_id)
+            logs = DeviceLog.objects.filter(switch=device)
+        elif device_type == 'pc':
+            device = get_object_or_404(PC, id=device_id)
+            logs = DeviceLog.objects.filter(pc=device)
+        else:
+            return JsonResponse({'status': 'false', 'message': 'Invalid device type'}, status=400)
+
+        response = HttpResponse(content_type='text/plain')
+        response['Content-Disposition'] = f'attachment; filename={device.name}_logs.txt'
+
+        for log in logs:
+            response.write(f"Timestamp: {log.timestamp.astimezone().strftime('%m/%d/%Y, %H:%M:%S')}\n")
+            response.write(f"User: {log.user.username if log.user else 'System'}\n")
+            response.write(f"Action: {log.action}\n")
+            response.write(f"Details: {log.details}\n")
+            response.write("\n" + "-"*40 + "\n")
+
+        return response
 
 
 class LogoutView(LoginRequiredMixin, View):
@@ -218,4 +301,3 @@ class LogoutView(LoginRequiredMixin, View):
         logout(request)
 
         return redirect(reverse('login_page'))
-

@@ -311,7 +311,6 @@
     </div>
 </nav>
 
-<!-- Sidebar -->
 <div class="sidebar">
 
     <a href="" id="dashboard-link"><i class="fas fa-home"></i> Dashboard</a>
@@ -320,7 +319,6 @@
 </div>
 
 
-<!-- Page Content -->
 <div class="content">
 
 
@@ -453,6 +451,8 @@
             </div>
 
         </div>
+
+        <button id="logbutton" class="btn btn-primary">Download Log</button>
     </div>
     <div id="device-list-container">
         <h1>Device List</h1>
@@ -479,7 +479,6 @@
                     <td colspan="4">No devices found.</td>
                 </tr>
             {% endfor %}
-            <!-- Diğer cihazlar burada listelenir -->
             </tbody>
         </table>
     </div>
@@ -543,6 +542,12 @@
             $('#page-title').text('Device List');
             $('#device-list-container').show();
         });
+        $('#logbutton').click(function () {
+            const deviceType = nodeDetails.type;
+            const deviceId = nodeDetails.id;
+            var downloadUrl = "{% url 'download_log' 'device_type' 0 %}".replace('device_type', deviceType).replace("/0/", "/" + deviceId + "/");
+            window.location.href = downloadUrl;
+        });
 
 
     });
@@ -550,10 +555,10 @@
     function addBackupRestoreClickHandlers() {
         document.querySelectorAll("[id^='backup_']").forEach(button => {
             button.addEventListener('click', function () {
-                var backupId = this.id.split('_')[1]; // Extract backup ID from the button ID
+                var backupId = this.id.split('_')[1];
 
                 $.ajax({
-                    url: '{% url "restore_backup" %}',  // Django URL for the view handling the backup restore
+                    url: '{% url "restore_backup" %}',
                     type: 'POST',
                     data: {
                         'backup_id': backupId,
@@ -562,7 +567,7 @@
                     success: function (response) {
                         if (response.status === 'success') {
                             alert('Backup restored successfully!');
-                            window.location.reload();  // Reload the page to reflect changes
+                            window.location.reload();
                         } else {
                             alert('Failed to restore backup.');
                         }
@@ -638,7 +643,6 @@
         var restoreButtonsDiv = document.getElementById('restore-buttons');
         var backupRows = document.getElementById('backup-rows');
 
-        // Clear existing rows
         backupRows.innerHTML = '';
         console.log({{ backups|safe }});
         console.log("id", nodeDetails.id);
@@ -675,23 +679,11 @@
         document.getElementById("restorebackupbutton").style.display = 'block';
     }
 
-    function restoreBackup1() {
-
-
-        /*  BACKUP 1 YERİİİİİ    */
-    }
-
-    function restoreBackup2() {
-
-
-        /*  BACKUP2  YERİİİİİ    */
-    }
-
     function getBackUp() {
         var switchId = nodeDetails.id;
 
         $.ajax({
-            url: '{% url "get_backup" %}',  // Django URL for the view handling the backup download
+            url: '{% url "get_backup" %}',
             type: 'POST',
             data: {
                 'switch_id': switchId,
@@ -701,7 +693,6 @@
                 if (response.status === 'success') {
                     alert('Backup successfully');
                     window.location.reload();
-                    {#window.location.href = response.download_url;  // Redirect to the file download URL#}
                 } else {
                     alert('Failed to get backup.');
                     window.location.reload();
@@ -729,7 +720,7 @@
                 'interface_id': interfaceID,
                 'interface_ip': interfaceIP,
                 'interface_mask': interfaceMask,
-                'csrfmiddlewaretoken': '{{ csrf_token }}'  // CSRF token ekleme
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
             },
             success: function (response) {
                 if (response.status === 'success') {
@@ -753,13 +744,13 @@
         var switchID = document.getElementById('createVlanButton').getAttribute('data-switch-id');
 
         $.ajax({
-            url: '{% url "create_vlan" %}',  // Django'daki URL yönlendirmesi
+            url: '{% url "create_vlan" %}',
             type: 'POST',
             data: {
                 'switch_id': switchID,
                 'vlan_id': vlanid,
                 'vlan_name': vlanname,
-                'csrfmiddlewaretoken': '{{ csrf_token }}'  // CSRF token ekleme
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
             },
             success: function (response) {
                 if (response.status === 'success') {
@@ -784,14 +775,14 @@
         var switchID = document.getElementById('createRouteButton').getAttribute('data-switch-id');
 
         $.ajax({
-            url: '{% url "create_route" %}',  // Django'daki URL yönlendirmesi
+            url: '{% url "create_route" %}',
             type: 'POST',
             data: {
                 'switch_id': switchID,
                 'network_ip': networkIP,
                 'subnet_mask': subnetmask,
                 'next_hop': nexthop,
-                'csrfmiddlewaretoken': '{{ csrf_token }}'  // CSRF token ekleme
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
             },
             success: function (response) {
                 if (response.status === 'success') {
@@ -817,14 +808,14 @@
         var pcId = document.getElementById('SaveButton').getAttribute('data-pc-id');
 
         $.ajax({
-            url: '{% url "pc_set_ip" %}',  // Django URL'ye gönderme
+            url: '{% url "pc_set_ip" %}',
             type: 'POST',
             data: {
                 'pc_id': pcId,
                 'ip_address': ipAddress,
                 'default_gateway': gateway,
                 'mask': mask,
-                'csrfmiddlewaretoken': '{{ csrf_token }}'  // CSRF token ekleme
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
             },
             success: function (response) {
                 alert('IP Configuration Saved Successfully!');
@@ -855,7 +846,6 @@
 
         CreateButton.setAttribute('data-switch-id', nodeDetails.id);
 
-        // Diğer butonları gizle
         var buttons = document.querySelectorAll('#tooltip-container button');
         buttons.forEach(button => {
 
@@ -885,7 +875,6 @@
 
         CreateButton.setAttribute('data-switch-id', nodeDetails.id);
 
-        // Diğer butonları gizle
         var buttons = document.querySelectorAll('#tooltip-container button');
         buttons.forEach(button => {
 
@@ -915,7 +904,6 @@
 
         CreateButton.setAttribute('data-switch-id', nodeDetails.id);
 
-        // Diğer butonları gizle
         var buttons = document.querySelectorAll('#tooltip-container button');
         buttons.forEach(button => {
 
@@ -941,8 +929,6 @@
 
         SaveButton.setAttribute('data-pc-id', nodeDetails.id);
 
-
-        // Diğer butonları gizle
         var buttons = document.querySelectorAll('#tooltip-container button');
         buttons.forEach(button => {
 
@@ -968,13 +954,11 @@
             document.getElementById("interfacesinfobutton").style.display = 'block';
             document.getElementById("routesinfobutton").style.display = 'block';
 
-
             var updateStatus = document.getElementById('update-status');
             updateStatus.style.display = "none";
 
             var backupStatus = document.getElementById('backup-status');
             backupStatus.style.display = "none";
-
 
         } else if (nodeDetails.type === 'pc') {
             showDetails(1);
@@ -995,15 +979,12 @@
         if (details.style.display === 'none' || details.style.display === '') {
             detail.style.display = "block";
             details.style.display = 'block';
-            // Details başlığını göster
 
-            // Diğer butonları gizle
             var buttons = document.querySelectorAll('#tooltip-container button');
             buttons.forEach(button => {
                 if (button.id !== "backButton") {
                     button.style.display = 'none';
                 }
-
 
             });
 
@@ -1031,7 +1012,7 @@
         document.getElementById('tooltip-details').innerHTML = formatTooltipDetails(nodeDetails.title);
     }
 
-    let vlanData =  JSON.parse('{{ vlan_datas|safe }}');
+    let vlanData = JSON.parse('{{ vlan_datas|safe }}');
     let interfaceData = JSON.parse('{{ interface_datas|safe }}');
     let routeData = JSON.parse('{{ route_datas|safe }}');
 
@@ -1056,7 +1037,6 @@
         document.getElementById('details').style.display = 'block';
         document.getElementById('tooltip-details').style.display = 'block';
 
-        // Hide other buttons and display the back button
         var buttons = document.querySelectorAll('#tooltip-container button');
         buttons.forEach(button => {
             if (button.id !== "backButton") {
@@ -1086,7 +1066,6 @@
         document.getElementById('details').style.display = 'block';
         document.getElementById('tooltip-details').style.display = 'block';
 
-        // Hide other buttons and display the back button
         var buttons = document.querySelectorAll('#tooltip-container button');
         buttons.forEach(button => {
             if (button.id !== "backButton") {
@@ -1095,8 +1074,6 @@
         });
         document.getElementById('backDiv').style.display = 'block';
 
-        {#var detailsContent = convertNewlinesToBreaks(nodeDetails.title)#}
-        {#document.getElementById('tooltip-details').innerHTML = "interface";#}
     }
 
     function showRoutesDetails() {
@@ -1120,7 +1097,6 @@
         document.getElementById('details').style.display = 'block';
         document.getElementById('tooltip-details').style.display = 'block';
 
-        // Hide other buttons and display the back button
         var buttons = document.querySelectorAll('#tooltip-container button');
         buttons.forEach(button => {
             if (button.id !== "backButton") {
@@ -1129,28 +1105,28 @@
         });
         document.getElementById('backDiv').style.display = 'block';
 
-        {#var detailsContent = convertNewlinesToBreaks(nodeDetails.title)#}
-        {#document.getElementById('tooltip-details').innerHTML = "routes";#}
     }
 
 
     function backFunction() {
-        // Tooltip detaylarını gizle
 
         if (nodeDetails.type === 'switch') {
 
-            document.getElementById("deviceinfobutton").style.display = 'block'; // General Information
+            document.getElementById("deviceinfobutton").style.display = 'block';
             document.getElementById("setipbutton").style.display = 'none';
             document.getElementById("configurebutton").style.display = 'block';
             document.getElementById("backupbutton").style.display = 'block';
 
 
         } else if (nodeDetails.type === 'pc') {
-            document.getElementById("deviceinfobutton").style.display = 'block'; // General Information
-            document.getElementById("setipbutton").style.display = 'block'; // Set IP
+            document.getElementById("deviceinfobutton").style.display = 'block';
+            document.getElementById("setipbutton").style.display = 'block';
             document.getElementById("configurebutton").style.display = 'none';
             document.getElementById("backupbutton").style.display = 'none';
         }
+
+        document.getElementById("logbutton").style.display = 'block';
+
 
         var infoButtons = document.getElementById('info-buttons');
         infoButtons.style.display = "none";
@@ -1166,7 +1142,7 @@
 
         var detail = document.getElementById('details');
         detail.style.display = "none";
-        // Details başlığını gizle
+
         var IpForm = document.getElementById('ip-form');
         IpForm.style.display = "none";
 
@@ -1184,11 +1160,8 @@
         var updateStatus = document.getElementById('update-status');
         updateStatus.style.display = "none";
 
-
         var backupStatus = document.getElementById('backup-status');
         backupStatus.style.display = "none";
-        // Diğer butonları görünür yap
-
 
         var backDiv = document.getElementById('backDiv');
 
@@ -1198,7 +1171,6 @@
 
 
     function formatTooltipDetails(details) {
-        // Detayları başlık ve içerik olarak böl
         var lines = details.split('\n');
         var formattedDetails = '';
 
@@ -1303,11 +1275,15 @@
                 document.getElementById("setipbutton").style.display = 'none';
                 document.getElementById("configurebutton").style.display = 'block';
                 document.getElementById("backupbutton").style.display = 'block';
+                document.getElementById("logbutton").style.display = 'block';
+
             } else if (nodeDetails.type === 'pc') {
                 document.getElementById("deviceinfobutton").style.display = 'block'; // General Information
                 document.getElementById("setipbutton").style.display = 'block'; // Set IP
                 document.getElementById("configurebutton").style.display = 'none';
                 document.getElementById("backupbutton").style.display = 'none';
+                document.getElementById("logbutton").style.display = 'block';
+
             }
             backFunction();
 

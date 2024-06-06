@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import DeviceListView, PCSetIPView, \
     SwitchCreateVlanView, SwitchCreateRouteView, SwitchCreateVlanInterfaceView, GetBackupView, RestoreBackupView, \
-    LogoutView
+    LogoutView, DownloadLogView
 
 urlpatterns = [
     path('devices/', DeviceListView.as_view(), name='device_list'),
@@ -12,4 +12,5 @@ urlpatterns = [
     path('devices/get_backup', GetBackupView.as_view(), name='get_backup'),
     path('devices/restore_backup/', RestoreBackupView.as_view(), name="restore_backup"),
     path('devices/logout/', LogoutView.as_view(), name="Logout"),
+    path('devices/download_log/<str:device_type>/<int:device_id>/', DownloadLogView.as_view(), name='download_log'),
 ]
