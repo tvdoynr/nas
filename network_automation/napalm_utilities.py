@@ -8,7 +8,7 @@ import time
 from django.conf import settings
 from napalm import get_network_driver
 
-from network_automation.models import ConfigurationBackup
+from network_automation.models import ConfigurationBackup, Interface, Vlan, Route
 
 
 def switch_get_info(ip, username, password, mode):
@@ -41,18 +41,21 @@ def switch_get_info(ip, username, password, mode):
 
         routes = []
         for line in routing_table.split('\n'):
-            if 'via' in line:
+            if any(proto in line for proto in ['via', 'is directly connected']):
                 route_parts = line.split()
                 route = {}
                 route['protocol'] = route_parts[0].strip('*')
                 route['network'] = route_parts[1]
-                route['distance'] = route_parts[2].strip('[]').split('/')[0]
-                route['metric'] = route_parts[2].strip('[]').split('/')[1]
-                route['next_hop'] = route_parts[4]
-                if len(route_parts) > 5:
-                    route['interface'] = route_parts[5]
+                if 'via' in line:
+                    route['distance'] = route_parts[2].strip('[]').split('/')[0]
+                    route['metric'] = route_parts[2].strip('[]').split('/')[1]
+                    route['next_hop'] = route_parts[4]
+                    route['interface'] = route_parts[5] if len(route_parts) > 5 else ''
                 else:
-                    route['interface'] = ''
+                    route['distance'] = '0'
+                    route['metric'] = '0'
+                    route['next_hop'] = route_parts[5]
+                    route['interface'] = route_parts[3] if len(route_parts) > 3 else ''
                 routes.append(route)
 
         result['routes'] = routes
@@ -84,11 +87,10 @@ def pc_telnet(ip, port, command):
     time.sleep(1)  # Wait for the command to execute
     command_output = tn.read_very_eager().decode('ascii')
 
-    # print(command_output)
 
     tn.close()
 
-    return command_output
+    return "Invalid address" in command_output
 
 
 def switch_get_backup(ip, username, password):
@@ -244,6 +246,62 @@ def create_route(ip, username, password, destination_network, subnet_mask, next_
         device.close()
 
 
+def refresh_switch_info(switch):
+    switch_info = switch_get_info(switch.ip_address, switch.ssh_username, switch.ssh_password, 'f')
+
+    if 'facts' in switch_info:
+        switch.hostname = switch_info['facts']['hostname']
+        switch.uptime = switch_info['facts']['uptime']
+        switch.model = switch_info['facts']['model']
+        switch.serial_number = switch_info['facts']['serial_number']
+        switch.save()
+
+    # Delete existing interfaces, vlans, and routes
+    Interface.objects.filter(switch=switch).delete()
+    Vlan.objects.filter(switch=switch).delete()
+    Route.objects.filter(switch=switch).delete()
+
+    # Update interfaces
+    interface_info = switch_get_info(switch.ip_address, switch.ssh_username, switch.ssh_password, 'i')
+    if 'interfaces' in interface_info:
+        for interface_name, interface_data in interface_info['interfaces'].items():
+            if 'ipv4' in interface_data and interface_data['ipv4']:
+                for ip_address, ip_info in interface_data['ipv4'].items():
+                    prefix_length = ip_info.get('prefix_length', None)
+
+                    Interface.objects.create(
+                        switch=switch,
+                        name=interface_name,
+                        ip_address=ip_address,
+                        mask=prefix_length,
+                    )
+
+    # Update vlans
+    vlan_info = switch_get_info(switch.ip_address, switch.ssh_username, switch.ssh_password, 'v')
+    if 'vlans' in vlan_info:
+        for vlan_id, vlan_data in vlan_info['vlans'].items():
+            if vlan_id in ["10", "20", "30", "40", "50", "150"]:
+                Vlan.objects.create(
+                    switch=switch,
+                    vlan_id=vlan_id,
+                    name=vlan_data['name'],
+                    ports=', '.join(vlan_data['interfaces'])
+                )
+
+    # Update routes
+    route_info = switch_get_info(switch.ip_address, switch.ssh_username, switch.ssh_password, 'r')
+    if 'routes' in route_info:
+        for route_data in route_info['routes']:
+            Route.objects.create(
+                switch=switch,
+                protocol=route_data.get('protocol', ''),
+                network=route_data.get('network', ''),
+                distance=route_data.get('distance', ''),
+                metric=route_data.get('metric', ''),
+                next_hop=route_data.get('next_hop', ''),
+            )
+
+
 def create_vlan_interface(ip, username, password, vlan_id, vlan_ip, vlan_subnet_mask):
     driver = get_network_driver('ios')
     device = driver(ip, username, password)
@@ -307,3 +365,39 @@ def subnet_mask_to_prefix(subnet_mask):
     prefix_length = sum(bin(int(octet)).count('1') for octet in octets)
 
     return str(prefix_length)
+
+def is_valid_ipv4(ip: str) -> bool:
+    # Regular expression to match valid IPv4 addresses
+    pattern = re.compile(r'^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])$')
+
+    if pattern.match(ip):
+        return True
+    else:
+        return False
+
+def is_valid_subnet_mask(mask: str) -> bool:
+    try:
+        parts = list(map(int, mask.split('.')))
+        if len(parts) != 4:
+            return False
+
+        binary_str = ''.join(f'{part:08b}' for part in parts)
+
+        if '01' in binary_str:
+            return False
+
+        valid_masks = [
+            "0.0.0.0", "128.0.0.0", "192.0.0.0", "224.0.0.0", "240.0.0.0",
+            "248.0.0.0", "252.0.0.0", "254.0.0.0", "255.0.0.0", "255.128.0.0",
+            "255.192.0.0", "255.224.0.0", "255.240.0.0", "255.248.0.0",
+            "255.252.0.0", "255.254.0.0", "255.255.0.0", "255.255.128.0",
+            "255.255.192.0", "255.255.224.0", "255.255.240.0", "255.255.248.0",
+            "255.255.252.0", "255.255.254.0", "255.255.255.0", "255.255.255.128",
+            "255.255.255.192", "255.255.255.224", "255.255.255.240",
+            "255.255.255.248", "255.255.255.252", "255.255.255.254",
+            "255.255.255.255"
+        ]
+
+        return mask in valid_masks
+    except ValueError:
+        return False

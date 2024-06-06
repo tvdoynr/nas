@@ -6,6 +6,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css" rel="stylesheet" type="text/css"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
 
+
     <style>
         body {
             background-color: #f4f7f6;
@@ -211,6 +212,84 @@
         }
 
 
+        #settings-container {
+            display: none;
+            flex-wrap: wrap;
+            height: auto;
+            overflow: hidden;
+
+
+        }
+
+        .settings-item {
+
+
+            text-align: center;
+
+        }
+
+        .settings-item img {
+
+            width: 200px;
+            height: 200px;
+
+            border: 2px solid #ccc;
+            border-radius: 8px;
+        }
+
+        .members-container {
+            display: flex;
+        }
+
+        .poster {
+
+            margin-left: 15%;
+
+        }
+
+        .poster {
+
+            z-index: 2;
+        }
+
+
+        .alpvesika {
+            position: absolute;
+            top: 10%;
+            left: 10%;
+            max-height: 10px;
+            z-index: 3;
+        }
+
+        .yigitvesika {
+            position: absolute;
+            top: 90%;
+            left: 10%;
+
+            z-index: 3;
+        }
+
+        .memovesika {
+            position: absolute;
+            top: 50%;
+            left: 10%;
+
+            z-index: 3;
+        }
+
+        .linkedin-link {
+            display: block;
+            margin-top: 5px;
+            text-decoration: none;
+            color: #0077b5;
+            font-size: 20px;
+        }
+
+        .linkedin-link i {
+            margin-right: 5px;
+        }
+
+
     </style>
 </head>
 <body>
@@ -226,7 +305,7 @@
         <ul class="navbar-nav ml-auto">
 
             <li class="nav-item">
-                <a class="nav-link" href="#">Logout <i class="fas fa-sign-out-alt"></i></a>
+                <a class="nav-link" href="{% url 'Logout' %}">Logout <i class="fas fa-sign-out-alt"></i></a>
             </li>
         </ul>
     </div>
@@ -235,9 +314,9 @@
 <!-- Sidebar -->
 <div class="sidebar">
 
-    <a href="#" id="dashboard-link"><i class="fas fa-home"></i> Dashboard</a>
+    <a href="" id="dashboard-link"><i class="fas fa-home"></i> Dashboard</a>
     <a href="#" id="devices-link"><i class="fas fa-list"></i> Devices</a>
-    <a href="#"><i class="fas fa-cogs"></i> Settings</a>
+    <a href="#" id="settings-link"><i class="fas fa-cogs"></i> &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp Info</a>
 </div>
 
 
@@ -404,6 +483,31 @@
             </tbody>
         </table>
     </div>
+    <div id="settings-container">
+
+
+        <div class="poster">
+            <img src="{% static 'images/poster.jpeg' %}" alt="Poster">
+        </div>
+        <div class="members-container">
+            <div class="alpvesika">
+                <img src="{% static 'images/alp.png' %}" alt="Image 1" style="height: 200px ;width: 200px">
+                <a href="https://www.linkedin.com/in/mehmet-alp-k-289446138/" class="linkedin-link" target="_blank"><i
+                        class="fab fa-linkedin"></i>Mehmet Alp Kaynar</a>
+            </div>
+            <div class="yigitvesika">
+                <img src="{% static 'images/yigit.png' %}" alt="Image 2" style="height: 200px ;width: 200px">
+                <a href="https://www.linkedin.com/in/yiğit-emir-işıkçı-0735b61b4/" class="linkedin-link"
+                   target="_blank"><i class="fab fa-linkedin"></i>Yiğit Emir Işıkçı</a>
+            </div>
+            <div class="memovesika">
+                <img src="{% static 'images/memo.jpeg' %}" alt="Image 3" style="height: 200px ;width: 200px">
+                <a href="https://www.linkedin.com/in/mehmet-can-03a895224/" class="linkedin-link" target="_blank"><i
+                        class="fab fa-linkedin"></i>Mehmet Can Kibar</a>
+            </div>
+        </div>
+
+    </div>
 
 
 </div>
@@ -418,18 +522,26 @@
 
 <script>
     $(document).ready(function () {
-        $('#devices-link').click(function () {
+        $('#settings-link').click(function () {
             $('#network').hide();
+            $('#device-list-container').hide();
             $('#tooltip-container').hide();
-            $('#page-title').text('Device List');
-
-            $('#device-list-container').show();
+            $('#settings-container').show();
+            $('#page-title').text('Settings');
         });
 
         $('#dashboard-link').click(function () {
+            $('#settings-container').hide();
             $('#device-list-container').hide();
             $('#page-title').text('Network Topology');
             $('#network').show();
+        });
+
+        $('#devices-link').click(function () {
+            $('#network').hide();
+            $('#settings-container').hide();
+            $('#page-title').text('Device List');
+            $('#device-list-container').show();
         });
 
 
@@ -458,6 +570,7 @@
                     error: function (xhr, status, error) {
                         console.log('AJAX Error: ' + status + error);
                         alert('Error restoring backup.');
+                        window.location.reload();
                     }
                 });
             });
@@ -586,17 +699,18 @@
             },
             success: function (response) {
                 if (response.status === 'success') {
-                    setTimeout(function () {
-                        window.location.reload();
-                    }, 10);
+                    alert('Backup successfully');
+                    window.location.reload();
                     {#window.location.href = response.download_url;  // Redirect to the file download URL#}
                 } else {
                     alert('Failed to get backup.');
+                    window.location.reload();
                 }
             },
             error: function (xhr, status, error) {
                 console.log('AJAX Error: ' + status + error);
                 alert('Error getting backup.');
+                window.location.reload();
             }
         });
     }
@@ -620,12 +734,10 @@
             success: function (response) {
                 if (response.status === 'success') {
                     alert('Interface created successfully!');
-                    console.log(response);
-                    setTimeout(function () {
-                        window.location.reload();
-                    }, 10);
+                    window.location.reload();
                 } else {
                     alert('Failed to create interface.');
+                    window.location.reload();
                 }
             },
             error: function (xhr, status, error) {
@@ -652,12 +764,10 @@
             success: function (response) {
                 if (response.status === 'success') {
                     alert('VLAN created successfully!');
-                    setTimeout(function () {
-                        window.location.reload();
-                    }, 10);
-                    console.log(response);
+                    window.location.reload();
                 } else {
                     alert('Failed to create VLAN.');
+                    window.location.reload();
                 }
             },
             error: function (xhr, status, error) {
@@ -686,12 +796,10 @@
             success: function (response) {
                 if (response.status === 'success') {
                     alert('Route created successfully!');
-                    console.log(response);
+                    window.location.reload();
                 } else {
                     alert('Failed to create route.');
-                    setTimeout(function () {
-                        window.location.reload();
-                    }, 10);
+                    window.location.reload();
                 }
             },
             error: function (xhr, status, error) {
@@ -720,13 +828,12 @@
             },
             success: function (response) {
                 alert('IP Configuration Saved Successfully!');
-                setTimeout(function () {
-                        window.location.reload();
-                    }, 10);
+                window.location.reload();
 
             },
             error: function () {
                 alert('Error saving IP configuration.');
+                window.location.reload();
             }
         });
     }
@@ -924,9 +1031,9 @@
         document.getElementById('tooltip-details').innerHTML = formatTooltipDetails(nodeDetails.title);
     }
 
-    let vlanData = {{ vlan_datas|safe }};
-    let interfaceData = {{ interface_datas|safe }};
-    let routeData = {{ route_datas|safe }};
+    let vlanData =  JSON.parse('{{ vlan_datas|safe }}');
+    let interfaceData = JSON.parse('{{ interface_datas|safe }}');
+    let routeData = JSON.parse('{{ route_datas|safe }}');
 
 
     function showVlanDetails() {
@@ -969,7 +1076,7 @@
             var details = filteredInterfaces.map(interface => `
                 <div>
                     <strong>Name:</strong> ${interface.name}<br>
-                    <strong>Ip Address:</strong> ${interface.ip_address}<br><br>
+                    <strong>Ip Address:</strong> ${interface.ip_address}/${interface.mask}<br><br>
                 </div>
             `).join('');
             document.getElementById('tooltip-details').innerHTML = details;
@@ -1003,7 +1110,7 @@
                 <div>
                     <strong>Network: </strong> ${route.network}<br>
                     <strong>Next Hop: </strong> ${route.next_hop}<br>
-                    <strong>Protocol: ${route.protocol}</strong>
+                    <strong>Protocol: ${route.protocol}</strong><br><br>
                 </div>
             `).join('');
             document.getElementById('tooltip-details').innerHTML = details;
@@ -1107,6 +1214,7 @@
 
 
     var nodes = new vis.DataSet({{ nodes|safe }});
+
     var edges = new vis.DataSet({{ edges|safe }});
 
     var container = document.getElementById('network');
@@ -1124,21 +1232,21 @@
         },
         edges: {
             width: 3,
-            length: 150,
+            length: 150, // Kenar uzunluğunu artırarak düğümler arasındaki mesafeyi artırabilirsiniz
             font: {
                 align: 'top'
             }
         },
         layout: {
             hierarchical: {
-                direction: 'UD',
+                direction: 'UD', // Yukarıdan aşağıya (Up-Down) yerleşim
                 sortMethod: 'directed',
                 nodeSpacing: 200,
                 levelSeparation: 200
             }
         },
         physics: {
-            enabled: false
+            enabled: false // Hiyerarşik düzen kullanıldığında fizik genellikle kapatılır
         },
         interaction: {
             dragNodes: true,
@@ -1183,13 +1291,14 @@
 
     var nodeDetails;
 
-     network.on("click", function (params) {
+    network.on("click", function (params) {
         if (params.nodes.length > 0) {
             nodeDetails = nodes.get(params.nodes[0]);
             document.getElementById('tooltip-name').textContent = nodeDetails.label;
             document.getElementById('tooltip-container').style.display = 'flex';
 
             if (nodeDetails.type === 'switch') {
+
                 document.getElementById("deviceinfobutton").style.display = 'block'; // General Information
                 document.getElementById("setipbutton").style.display = 'none';
                 document.getElementById("configurebutton").style.display = 'block';
@@ -1201,7 +1310,9 @@
                 document.getElementById("backupbutton").style.display = 'none';
             }
             backFunction();
+
         }
+
     });
 
 

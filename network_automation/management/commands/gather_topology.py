@@ -56,10 +56,14 @@ class Command(BaseCommand):
             interface_info = switch_get_info(switch_ip, 'admin', 'admin123', 'i')
             if 'interfaces' in interface_info:
                 for interface_name, interface_data in interface_info['interfaces'].items():
-                    interface, created = Interface.objects.get_or_create(switch=switch, name=interface_name)
-                    interface.ip_address = list(interface_data['ipv4'].keys())[0] if interface_data[
-                        'ipv4'] else None
-                    interface.save()
+                    if 'ipv4' in interface_data and interface_data['ipv4']:
+                        for ip_address, ip_info in interface_data['ipv4'].items():
+                            prefix_length = ip_info.get('prefix_length', None)
+
+                            interface, created = Interface.objects.get_or_create(switch=switch, name=interface_name)
+                            interface.ip_address = ip_address
+                            interface.mask = prefix_length
+                            interface.save()
 
             vlan_info = switch_get_info(switch_ip, 'admin', 'admin123', 'v')
             if 'vlans' in vlan_info:
@@ -80,7 +84,6 @@ class Command(BaseCommand):
                         distance=route_data.get('distance', ''),
                         metric=route_data.get('metric', ''),
                         next_hop=route_data.get('next_hop', ''),
-                        interface=route_data.get('interface', '')
                     )
 
         for pc_name, pc_port in pcs_port.items():

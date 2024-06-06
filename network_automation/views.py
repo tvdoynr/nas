@@ -1,11 +1,15 @@
+import json
+
+from django.contrib.auth import logout
 from django.core.serializers import serialize
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.views import View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from napalm import get_network_driver
 from .napalm_utilities import switch_get_info, switch_get_backup, pc_telnet, create_vlan, subnet_mask_to_prefix, \
-    create_route, create_vlan_interface, switch_restore_backup
+    create_route, create_vlan_interface, switch_restore_backup, refresh_switch_info, is_valid_ipv4, is_valid_subnet_mask
 from .models import NetworkDevice, Switch, PC, Vlan, Interface, Route, ConfigurationBackup
 
 
@@ -25,7 +29,7 @@ class DeviceListView(LoginRequiredMixin, View):
 
         for switch in switches:
             node = {
-                'id': f'switch_{switch.id}',
+                'id': switch.id,
                 'label': switch.name,
                 'title': f"{switch.name}\nHostname: {switch.hostname}\nModel: {switch.model}\nSerial Number: {switch.serial_number}\nUptime: {switch.uptime}",
                 'shape': 'image',
@@ -37,14 +41,14 @@ class DeviceListView(LoginRequiredMixin, View):
 
             if switch.backbone_switch:
                 edge = {
-                    'from': f'switch_{switch.backbone_switch.id}',
-                    'to': f'switch_{switch.id}',
+                    'from': switch.backbone_switch.id,
+                    'to': switch.id,
                 }
                 edges.append(edge)
 
         for pc in pcs:
             node = {
-                'id': f'pc_{pc.id}',
+                'id': pc.id,
                 'label': pc.name,
                 'title': f"{pc.name}\nIP: {pc.ip_address}\nSubnet Mask: {pc.mask}\nMac: {pc.mac_address}\nDefault Gateaway: {pc.default_gateway}",
                 'shape': 'image',
@@ -56,8 +60,8 @@ class DeviceListView(LoginRequiredMixin, View):
 
             if pc.switch:
                 edge = {
-                    'from': f'switch_{pc.switch.id}',
-                    'to': f'pc_{pc.id}',
+                    'from': pc.switch.id,
+                    'to': pc.id,
                 }
                 edges.append(edge)
 
@@ -65,15 +69,14 @@ class DeviceListView(LoginRequiredMixin, View):
             'nodes': nodes,
             'edges': edges,
             'devices': devices,
-            'vlan_datas': list(vlan_datas.values()),
-            'interface_datas': list(interface_datas.values()),
-            'route_datas': list(route_datas.values()),
+            'vlan_datas': json.dumps(list(vlan_datas.values())),
+            'interface_datas': json.dumps(list(interface_datas.values())),
+            'route_datas': json.dumps(list(route_datas.values())),
             'backups': serialize('json', backups),
         }
         print(context)
 
         return render(request, 'device_list.html', context)
-
 
 class PCSetIPView(LoginRequiredMixin, View):
     def post(self, request):
@@ -92,15 +95,26 @@ class PCSetIPView(LoginRequiredMixin, View):
         ip_address = request.POST.get('ip_address')
         default_gateway = request.POST.get('default_gateway')
         mask = request.POST.get('mask')
+
         # error handle
+        if not is_valid_ipv4(ip_address) or not is_valid_ipv4(default_gateway) or not is_valid_subnet_mask(mask):
+            return JsonResponse({'status': 'false'}, status=500)
+
         pc_object = PC.objects.filter(id=pc_id).first()
         pc_port = pcs_port.get(pc_object.name)
-        pc_telnet("127.0.0.1", pc_port, f"ip {ip_address} {mask} {default_gateway if default_gateway else ''}")
-        PC.objects.filter(id=pc_id).update(
-            ip_address=ip_address,
-            default_gateway=default_gateway if default_gateway else '',
-            mask=mask,
-        )
+        try:
+            ip_flag = pc_telnet("127.0.0.1", pc_port, f"ip {ip_address} {mask} {default_gateway if default_gateway else ''}")
+            if not ip_flag:
+                PC.objects.filter(id=pc_id).update(
+                    ip_address=ip_address,
+                    default_gateway=default_gateway if default_gateway else '',
+                    mask=mask,
+                )
+            else:
+                return JsonResponse({'status': 'false'}, status=500)
+        except Exception as e:
+            print(str(e))
+            return JsonResponse({'status':'false','message':str(e)}, status=500)
         return JsonResponse({'status': 'success'})
 
 
@@ -122,10 +136,14 @@ class SwitchCreateVlanView(LoginRequiredMixin, View):
 
 class SwitchCreateRouteView(LoginRequiredMixin, View):
     def post(self, request):
-        print(request.POST)
         switch_id = request.POST.get('switch_id')
         network_ip = request.POST.get('network_ip')
         subnet_mask = request.POST.get('subnet_mask')
+
+        # error handle
+        if not is_valid_ipv4(network_ip) or not is_valid_subnet_mask(subnet_mask):
+            return JsonResponse({'status': 'false'}, status=500)
+
         subnet_prefix = subnet_mask_to_prefix(subnet_mask)
         next_hop = request.POST.get('next_hop')
         network= network_ip + "/" + subnet_prefix
@@ -146,11 +164,15 @@ class SwitchCreateRouteView(LoginRequiredMixin, View):
 
 class SwitchCreateVlanInterfaceView(LoginRequiredMixin, View):
     def post(self, request):
-        print(request.POST)
         switch_id = request.POST.get('switch_id')
         interface_id = request.POST.get('interface_id')
         interface_ip = request.POST.get('interface_ip')
         interface_mask = request.POST.get('interface_mask')
+
+        # error handle
+        if not is_valid_ipv4(interface_ip) or not is_valid_subnet_mask(interface_mask):
+            return JsonResponse({'status': 'false'}, status=500)
+
         subnet_prefix = subnet_mask_to_prefix(interface_mask)
         switch_obj = get_object_or_404(Switch, id=switch_id)
 
@@ -174,7 +196,6 @@ class GetBackupView(LoginRequiredMixin, View):
             switch_id=switch_id,
             backup_file=file_path,
         ).save()
-        print(switch_id)
         return JsonResponse({'status': 'success'})
 
 
@@ -187,66 +208,14 @@ class RestoreBackupView(LoginRequiredMixin, View):
                               backup_obj.switch.ssh_password,
                               backup_obj.backup_file.path)
 
+        refresh_switch_info(backup_obj.switch)
+
         return JsonResponse({'status': 'success'})
 
 
-class DeviceBackupView(LoginRequiredMixin, View):
-    def post(self, request, device_id):
-        device = NetworkDevice.objects.get(id=device_id, user=request.user)
-        driver = get_network_driver('ios')
-        try:
-            with driver(device.ip_address, device.ssh_username, device.ssh_password) as device_conn:
-                backup_config = device_conn.get_config()
-                # Save the backup configuration to a file or database
-                # ...
-            return redirect('device_list')
-        except Exception as e:
-            # Handle any exceptions that occur during SSH connection
-            print(f"Error backing up device {device.name}: {str(e)}")
-            return redirect('device_list')
+class LogoutView(LoginRequiredMixin, View):
+    def get(self, request):
+        logout(request)
 
-class DeviceFirmwareUpdateView(LoginRequiredMixin, View):
-    def post(self, request, device_id):
-        device = NetworkDevice.objects.get(id=device_id, user=request.user)
-        driver = get_network_driver('ios')
-        try:
-            with driver(device.ip_address, device.ssh_username, device.ssh_password) as device_conn:
-                print("za")
-                # Perform firmware update logic here
-                #
-            return redirect('device_list')
-        except Exception as e:
-            # Handle any exceptions that occur during SSH connection
-            print(f"Error updating firmware for device {device.name}: {str(e)}")
-            return redirect('device_list')
+        return redirect(reverse('login_page'))
 
-class DeviceInfoView(LoginRequiredMixin, View):
-    def get(self, request, device_id):
-        device = NetworkDevice.objects.get(id=device_id, user=request.user)
-        driver = get_network_driver('ios')
-        try:
-            with driver(device.ip_address, device.ssh_username, device.ssh_password) as device_conn:
-                facts = device_conn.get_facts()
-                interfaces = device_conn.get_interfaces()
-                # Retrieve other relevant information
-                # ...
-            return render(request, 'device_info.html', {'device': device, 'facts': facts, 'interfaces': interfaces})
-        except Exception as e:
-            # Handle any exceptions that occur during SSH connection
-            print(f"Error retrieving information for device {device.name}: {str(e)}")
-            return redirect('device_list')
-
-# class DeviceSetIPView(LoginRequiredMixin, View):
-#     def post(self, request, device_id):
-#         device = NetworkDevice.objects.get(id=device_id, user=request.user)
-#         driver = get_network_driver('ios')
-#         try:
-#             with driver(device.ip_address, device.ssh_username, device.ssh_password) as device_conn:
-#                 print("zaa")
-#                 # Perform IP address configuration logic here
-#                 #
-#             return redirect('device_list')
-#         except Exception as e:
-#             # Handle any exceptions that occur during SSH connection
-#             print(f"Error setting IP for device {device.name}: {str(e)}")
-#             return redirect('device_list')
